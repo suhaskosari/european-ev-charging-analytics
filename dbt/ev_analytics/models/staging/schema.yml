@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: stg_cities
+    columns:
+      - name: city_key
+        tests: [unique, not_null]
+
+  - name: stg_stations
+    columns:
+      - name: station_id
+        tests: [unique, not_null]
+
+  - name: stg_charging_sessions
+    columns:
+      - name: session_id
+        tests: [unique, not_null]
+      - name: duration_min
+        tests: [not_null]
+
+  - name: stg_ev_registrations
+    columns:
+      - name: country_code
+        tests: [not_null]
+
+  - name: stg_energy_prices
+    columns:
+      - name: country_code
+        tests: [not_null]
+
+  - name: stg_traffic
+    columns:
+      - name: city_key
+        tests: [not_null]
+
+  - name: stg_weather
+    columns:
+      - name: city_key
+        tests: [not_null]

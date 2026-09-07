@@ -1,0 +1,9 @@
+city_key,city_name,country,country_code,latitude,longitude,population_millions,region
+stockholm,Stockholm,Sweden,SE,59.3293,18.0686,1.6,Nordics
+oslo,Oslo,Norway,NO,59.9139,10.7522,1.0,Nordics
+copenhagen,Copenhagen,Denmark,DK,55.6761,12.5683,0.8,Nordics
+berlin,Berlin,Germany,DE,52.52,13.405,3.7,Western Europe
+amsterdam,Amsterdam,Netherlands,NL,52.3676,4.9041,0.9,Western Europe
+paris,Paris,France,FR,48.8566,2.3522,2.1,Western Europe
+madrid,Madrid,Spain,ES,40.4168,-3.7038,3.3,Southern Europe
+warsaw,Warsaw,Poland,PL,52.2297,21.0122,1.9,Eastern Europe

@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: Cleaned CSV exports loaded as-is by python/load_warehouse.py.
+    tables:
+      - name: cities
+      - name: stations
+      - name: charging_sessions
+      - name: ev_registrations
+      - name: energy_prices
+      - name: traffic
+      - name: weather

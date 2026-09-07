@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: dim_city
+    columns:
+      - name: city_key
+        tests: [unique, not_null]
+
+  - name: dim_station
+    columns:
+      - name: station_id
+        tests: [unique, not_null]
+      - name: city_key
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city_key
+
+  - name: dim_date
+    columns:
+      - name: date_day
+        tests: [unique, not_null]
+
+  - name: fct_charging_sessions
+    columns:
+      - name: session_id
+        tests: [unique, not_null]
+      - name: station_id
+        tests:
+          - relationships:
+              arguments:
+                to: ref('dim_station')
+                field: station_id
+
+  - name: fct_ev_registrations
+    columns:
+      - name: country_code
+        tests: [not_null]
+
+  - name: station_utilization
+    columns:
+      - name: station_id
+        tests: [not_null]
+
+  - name: city_daily_demand
+    columns:
+      - name: city_key
+        tests: [not_null]
+      - name: date
+        tests: [not_null]

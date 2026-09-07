@@ -1,0 +1,17 @@
+city_key,city_name,candidate_latitude,candidate_longitude,nearest_existing_station_km,expansion_candidate
+amsterdam,Amsterdam,52.3936,4.94727,3.98,True
+amsterdam,Amsterdam,52.42129,4.77114,3.22,True
+berlin,Berlin,52.4863,13.52523,1.39,False
+berlin,Berlin,52.53261,13.33377,1.34,False
+copenhagen,Copenhagen,55.67799,12.47438,1.06,False
+copenhagen,Copenhagen,55.64482,12.60949,2.33,False
+madrid,Madrid,40.44238,-3.71202,2.72,False
+madrid,Madrid,40.42357,-3.82235,0.76,False
+oslo,Oslo,59.9297,10.83207,2.27,False
+oslo,Oslo,59.89055,10.69322,1.34,False
+paris,Paris,48.856,2.25941,2.54,False
+paris,Paris,48.81338,2.41455,1.68,False
+stockholm,Stockholm,59.35112,18.06453,2.3,False
+stockholm,Stockholm,59.29622,17.92563,0.92,False
+warsaw,Warsaw,52.19945,21.19929,0.0,False
+warsaw,Warsaw,52.24243,21.02064,2.14,False

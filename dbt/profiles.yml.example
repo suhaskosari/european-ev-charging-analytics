@@ -1,0 +1,13 @@
+# Copy this file to dbt/profiles.yml (gitignored). Run all dbt commands from
+# the REPO ROOT with:
+#   DBT_PROFILES_DIR=dbt dbt run --project-dir dbt/ev_analytics
+# dbt-duckdb resolves `path` relative to the current working directory (not
+# this file's location), so it must match wherever you invoke dbt from.
+ev_analytics:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: 'warehouse.duckdb'
+      schema: main
+      threads: 4

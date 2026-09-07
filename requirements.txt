@@ -1,0 +1,13 @@
+pandas>=2.2
+numpy>=1.26
+scipy>=1.13
+statsmodels>=0.14
+scikit-learn>=1.5
+faker>=25.0
+duckdb>=1.0
+dbt-core>=1.8
+dbt-duckdb>=1.8
+requests>=2.32
+matplotlib>=3.9
+folium>=0.17
+python-dotenv>=1.0

@@ -1,0 +1,90 @@
+{
+  "name": "PL_EV_Ingestion_Daily",
+  "properties": {
+    "description": "Daily ingestion of EV charging-platform sources into ADLS Gen2 Bronze, transform to Silver via a Fabric Lakehouse notebook, then load the Gold star schema via dbt. Mirrors python/fetch_*.py + generate_data.py + etl_clean_transform.py + dbt run in this repo's local demo.",
+    "activities": [
+      {
+        "name": "Copy_ChargingStations_OpenChargeMap",
+        "type": "Copy",
+        "typeProperties": {
+          "source": {
+            "type": "RestSource",
+            "httpRequestTimeout": "00:01:40",
+            "requestMethod": "GET",
+            "additionalHeaders": { "X-API-Key": "@pipeline().parameters.OpenChargeMapApiKey" }
+          },
+          "sink": {
+            "type": "JsonSink",
+            "storeSettings": { "type": "AzureBlobFSWriteSettings" }
+          }
+        },
+        "inputs": [{ "referenceName": "DS_REST_OpenChargeMap", "type": "DatasetReference" }],
+        "outputs": [{ "referenceName": "DS_ADLS_Bronze_ChargingStations", "type": "DatasetReference" }]
+      },
+      {
+        "name": "Copy_Weather_OpenMeteo",
+        "type": "Copy",
+        "typeProperties": {
+          "source": { "type": "RestSource", "requestMethod": "GET" },
+          "sink": { "type": "JsonSink", "storeSettings": { "type": "AzureBlobFSWriteSettings" } }
+        },
+        "inputs": [{ "referenceName": "DS_REST_OpenMeteo", "type": "DatasetReference" }],
+        "outputs": [{ "referenceName": "DS_ADLS_Bronze_Weather", "type": "DatasetReference" }]
+      },
+      {
+        "name": "Copy_ChargingSessions_CPOExport",
+        "type": "Copy",
+        "description": "Lands the daily charge-point-operator (CPO) billing export (SFTP) as-is, including its known quirks: mixed timestamp formats, duplicate retry rows, occasional sign-error refund costs.",
+        "typeProperties": {
+          "source": { "type": "DelimitedTextSource" },
+          "sink": { "type": "JsonSink", "storeSettings": { "type": "AzureBlobFSWriteSettings" } }
+        },
+        "inputs": [{ "referenceName": "DS_SFTP_CPOExport", "type": "DatasetReference" }],
+        "outputs": [{ "referenceName": "DS_ADLS_Bronze_ChargingSessions", "type": "DatasetReference" }]
+      },
+      {
+        "name": "Copy_EnergyPrices_ENTSOE",
+        "type": "Copy",
+        "typeProperties": {
+          "source": { "type": "RestSource", "requestMethod": "GET" },
+          "sink": { "type": "JsonSink", "storeSettings": { "type": "AzureBlobFSWriteSettings" } }
+        },
+        "inputs": [{ "referenceName": "DS_REST_ENTSOE", "type": "DatasetReference" }],
+        "outputs": [{ "referenceName": "DS_ADLS_Bronze_EnergyPrices", "type": "DatasetReference" }]
+      },
+      {
+        "name": "Transform_Bronze_To_Silver",
+        "type": "SynapseNotebook",
+        "description": "Runs fabric/lakehouse_notebook.py: dedup, timestamp normalization, sign-error correction, missing-value imputation. Same logic as python/etl_clean_transform.py, at Spark scale.",
+        "dependsOn": [
+          { "activity": "Copy_ChargingStations_OpenChargeMap", "dependencyConditions": ["Succeeded"] },
+          { "activity": "Copy_Weather_OpenMeteo", "dependencyConditions": ["Succeeded"] },
+          { "activity": "Copy_ChargingSessions_CPOExport", "dependencyConditions": ["Succeeded"] },
+          { "activity": "Copy_EnergyPrices_ENTSOE", "dependencyConditions": ["Succeeded"] }
+        ],
+        "typeProperties": {
+          "notebook": { "referenceName": "NB_EV_Bronze_To_Silver", "type": "NotebookReference" },
+          "parameters": { "run_date": { "value": "@formatDateTime(pipeline().TriggerTime, 'yyyy-MM-dd')", "type": "string" } }
+        }
+      },
+      {
+        "name": "dbt_Run_Gold_Star_Schema",
+        "type": "ExecuteDataFlow",
+        "description": "Invoked via an Azure Container Instance / Fabric pipeline step running `dbt run --project-dir dbt/ev_analytics` (dbt-fabric adapter) against Fabric Warehouse. Materializes dim_*, fct_*, and the analytics marts defined in dbt/ev_analytics/models.",
+        "dependsOn": [{ "activity": "Transform_Bronze_To_Silver", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {}
+      },
+      {
+        "name": "dbt_Test_Gold_Star_Schema",
+        "type": "ExecuteDataFlow",
+        "description": "Runs `dbt test` -- the same 25 uniqueness/not-null/relationship tests defined in dbt/ev_analytics/models/**/schema.yml. Pipeline fails (and alerts) on any test failure before Power BI Direct Lake reflects the new data.",
+        "dependsOn": [{ "activity": "dbt_Run_Gold_Star_Schema", "dependencyConditions": ["Succeeded"] }],
+        "typeProperties": {}
+      }
+    ],
+    "parameters": {
+      "OpenChargeMapApiKey": { "type": "SecureString" }
+    },
+    "annotations": ["ev-mobility-platform", "daily-batch"]
+  }
+}

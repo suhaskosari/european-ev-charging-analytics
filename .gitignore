@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+.env
+*.duckdb
+*.duckdb.wal
+data/processed/
+dbt/ev_analytics/target/
+dbt/ev_analytics/logs/
+dbt/ev_analytics/dbt_packages/
+dbt/profiles.yml
+dbt/.user.yml
+.DS_Store
+Thumbs.db

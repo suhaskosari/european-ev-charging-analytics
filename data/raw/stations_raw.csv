@@ -1,0 +1,83 @@
+station_id,station_name,city_key,operator,latitude,longitude,num_connectors,connector_type,power_kw,source
+STOCKHOLM-001,Stockholm Charging Hub 1,stockholm,PlugSurfing,59.32937,18.11758,1,ccs,22,synthetic
+STOCKHOLM-002,Stockholm Charging Hub 2,stockholm,Tesla Supercharger,59.34722,18.10429,1,CCS,11,synthetic
+STOCKHOLM-003,Stockholm Charging Hub 3,stockholm,PlugSurfing,59.31285,18.07914,6,CCS,22,synthetic
+STOCKHOLM-004,Stockholm Charging Hub 4,stockholm,Vattenfall InCharge,59.27586,17.97555,3,Type 2,50,synthetic
+STOCKHOLM-005,Stockholm Charging Hub 5,stockholm,IONITY,59.30202,18.06567,2,CCS,11,synthetic
+STOCKHOLM-006,Stockholm Charging Hub 6,stockholm,Enel X Way,59.2698,18.13813,3,Type 2,22,synthetic
+STOCKHOLM-007,Stockholm Charging Hub 7,stockholm,EVBox,59.33291,17.93418,1,Type 2,150,synthetic
+STOCKHOLM-008,Stockholm Charging Hub 8,stockholm,Fastned,59.40971,18.02284,4,CCS,150,synthetic
+STOCKHOLM-009,Stockholm Charging Hub 9,stockholm,IONITY,59.29977,17.87848,5,Type 2,50,synthetic
+STOCKHOLM-010,Stockholm Charging Hub 10,stockholm,Enel X Way,59.29207,17.93965,4,CCS,50,synthetic
+OSLO-001,Oslo Charging Hub 1,oslo,IONITY,60.03392,10.68463,2,CCS,50,synthetic
+OSLO-002,Oslo Charging Hub 2,oslo,Allego,59.95964,10.77251,1,ccs,50,synthetic
+OSLO-003,Oslo Charging Hub 3,oslo,EVBox,59.84194,10.70587,6,CCS,300,synthetic
+OSLO-004,Oslo Charging Hub 4,oslo,Allego,59.91837,10.76493,2,CHAdeMO,11,synthetic
+OSLO-005,Oslo Charging Hub 5,oslo,IONITY,59.9485,10.63348,2,CCS,50,synthetic
+OSLO-006,Oslo Charging Hub 6,oslo,Allego,59.90257,10.69427,4,Type 2,50,synthetic
+OSLO-007,Oslo Charging Hub 7,oslo,Vattenfall InCharge,59.95487,10.73258,2,Type 2,22,synthetic
+OSLO-008,Oslo Charging Hub 8,oslo,Allego,59.90991,10.84208,3,CCS,150,synthetic
+OSLO-009,Oslo Charging Hub 9,oslo,Tesla Supercharger,59.95393,10.86672,5,Type 2,22,synthetic
+OSLO-010,Oslo Charging Hub 10,oslo,PlugSurfing,60.00021,10.61985,1,Type 2,22,synthetic
+COPENHAGEN-001,Copenhagen Charging Hub 1,copenhagen,PlugSurfing,55.55398,12.54771,4,CCS,11,synthetic
+COPENHAGEN-002,Copenhagen Charging Hub 2,copenhagen,IONITY,55.65783,12.63855,5,Type 2,50,synthetic
+COPENHAGEN-003,Copenhagen Charging Hub 3,copenhagen,E.ON Drive,55.6221,12.62029,3,Type 2,11,synthetic
+COPENHAGEN-004,Copenhagen Charging Hub 4,copenhagen,Shell Recharge,55.68594,12.46493,6,CCS,22,synthetic
+COPENHAGEN-005,Copenhagen Charging Hub 5,copenhagen,Fastned,55.81079,12.56038,2,CHAdeMO,22,synthetic
+COPENHAGEN-006,Copenhagen Charging Hub 6,copenhagen,Vattenfall InCharge,55.6262,12.57183,6,CCS,22,synthetic
+COPENHAGEN-007,Copenhagen Charging Hub 7,copenhagen,PlugSurfing,55.63866,12.46285,6,CCS,50,synthetic
+COPENHAGEN-008,Copenhagen Charging Hub 8,copenhagen,PlugSurfing,55.68842,12.59428,3,ccs,50,synthetic
+COPENHAGEN-009,Copenhagen Charging Hub 9,copenhagen,Enel X Way,55.70568,12.4825,6,type 2,22,synthetic
+COPENHAGEN-010,Copenhagen Charging Hub 10,copenhagen,Fastned,55.66552,12.66551,4,CHAdeMO,22,synthetic
+BERLIN-001,Berlin Charging Hub 1,berlin,IONITY,52.5208,13.33788,2,Type 2,50,synthetic
+BERLIN-002,Berlin Charging Hub 2,berlin,IONITY,52.47834,13.29959,5,CCS,22,synthetic
+BERLIN-003,Berlin Charging Hub 3,berlin,PlugSurfing,52.5004,13.43873,1,CHAdeMO,50,synthetic
+BERLIN-004,Berlin Charging Hub 4,berlin,Enel X Way,52.48639,13.54573,6,CCS,150,synthetic
+BERLIN-005,Berlin Charging Hub 5,berlin,Vattenfall InCharge,52.52048,13.2596,1,Type 2,300,synthetic
+BERLIN-006,Berlin Charging Hub 6,berlin,Vattenfall InCharge,52.49748,13.38415,2,Type 2,11,synthetic
+BERLIN-007,Berlin Charging Hub 7,berlin,E.ON Drive,52.502,13.34179,4,Type 2,11,synthetic
+BERLIN-008,Berlin Charging Hub 8,berlin,Fastned,52.43729,13.2289,1,CCS,50,synthetic
+BERLIN-009,Berlin Charging Hub 9,berlin,Tesla Supercharger,52.47159,13.47849,2,CHAdeMO,11,synthetic
+BERLIN-010,Berlin Charging Hub 10,berlin,EVBox,52.61924,13.40266,5,CCS,50,synthetic
+AMSTERDAM-001,Amsterdam Charging Hub 1,amsterdam,Shell Recharge,52.4585,4.8026,4,CCS,50,synthetic
+AMSTERDAM-002,Amsterdam Charging Hub 2,amsterdam,Tesla Supercharger,52.2928,4.90286,4,CCS,11,synthetic
+AMSTERDAM-003,Amsterdam Charging Hub 3,amsterdam,EVBox,52.4193,4.98807,5,Type 2,150,synthetic
+AMSTERDAM-004,Amsterdam Charging Hub 4,amsterdam,Shell Recharge,52.39724,4.73972,6,CCS,50,synthetic
+AMSTERDAM-005,Amsterdam Charging Hub 5,amsterdam,Shell Recharge,52.42002,4.6931,1,CCS,11,synthetic
+AMSTERDAM-006,Amsterdam Charging Hub 6,amsterdam,Fastned,52.48034,4.93003,4,CHAdeMO,22,synthetic
+AMSTERDAM-007,Amsterdam Charging Hub 7,amsterdam,Fastned,52.45667,4.90854,2,Type 2,22,synthetic
+AMSTERDAM-008,Amsterdam Charging Hub 8,amsterdam,Allego,52.29889,4.87952,1,Type 2,50,synthetic
+AMSTERDAM-009,Amsterdam Charging Hub 9,amsterdam,Fastned,52.26628,4.90795,4,CCS,11,synthetic
+AMSTERDAM-010,Amsterdam Charging Hub 10,amsterdam,Shell Recharge,52.41661,4.81805,3,CCS,22,synthetic
+PARIS-001,Paris Charging Hub 1,paris,PlugSurfing,48.73847,2.34685,3,CCS,150,synthetic
+PARIS-002,Paris Charging Hub 2,paris,EVBox,48.66151,2.35604,5,CCS,11,synthetic
+PARIS-003,Paris Charging Hub 3,paris,PlugSurfing,48.82479,2.43274,5,Type 2,150,synthetic
+PARIS-004,Paris Charging Hub 4,paris,Vattenfall InCharge,48.93661,2.40746,4,CCS,11,synthetic
+PARIS-005,Paris Charging Hub 5,paris,Vattenfall InCharge,48.85943,2.37377,2,CCS,11,synthetic
+PARIS-006,Paris Charging Hub 6,paris,EVBox,48.78625,2.24791,6,Type 2,50,synthetic
+PARIS-007,Paris Charging Hub 7,paris,IONITY,48.80016,2.40331,5,CCS,11,synthetic
+PARIS-008,Paris Charging Hub 8,paris,Tesla Supercharger,48.92444,2.28378,6,CHAdeMO,50,synthetic
+PARIS-009,Paris Charging Hub 9,paris,IONITY,48.86606,2.46158,5,Type 2,150,synthetic
+PARIS-010,Paris Charging Hub 10,paris,Fastned,48.85948,2.22509,2,ccs,50,synthetic
+MADRID-001,Madrid Charging Hub 1,madrid,Shell Recharge,40.42006,-3.81471,6,Type 2,150,synthetic
+MADRID-002,Madrid Charging Hub 2,madrid,EVBox,40.50751,-3.71049,6,Type 2,11,synthetic
+MADRID-003,Madrid Charging Hub 3,madrid,Allego,40.45014,-3.61643,4,Type 2,11,synthetic
+MADRID-004,Madrid Charging Hub 4,madrid,PlugSurfing,40.41329,-3.74305,2,CHAdeMO,150,synthetic
+MADRID-005,Madrid Charging Hub 5,madrid,PlugSurfing,40.38204,-3.72652,5,Type 2,22,synthetic
+MADRID-006,Madrid Charging Hub 6,madrid,Fastned,40.3787,-3.7259,1,Type 2,22,synthetic
+MADRID-007,Madrid Charging Hub 7,madrid,Tesla Supercharger,40.51296,-3.69284,5,Type 2,22,synthetic
+MADRID-008,Madrid Charging Hub 8,madrid,E.ON Drive,40.4472,-3.8631,6,CCS,11,synthetic
+MADRID-009,Madrid Charging Hub 9,madrid,EVBox,40.42085,-3.72734,2,Type 2,300,synthetic
+MADRID-010,Madrid Charging Hub 10,madrid,Allego,40.39603,-3.78924,1,Type 2,22,synthetic
+WARSAW-001,Warsaw Charging Hub 1,warsaw,Vattenfall InCharge,52.2322,20.98232,2,CHAdeMO,300,synthetic
+WARSAW-002,Warsaw Charging Hub 2,warsaw,Enel X Way,52.31845,21.00818,4,Type 2,22,synthetic
+WARSAW-003,Warsaw Charging Hub 3,warsaw,Enel X Way,52.28728,21.03286,1,Type 2,300,synthetic
+WARSAW-004,Warsaw Charging Hub 4,warsaw,E.ON Drive,52.17317,21.0038,1,Type 2,50,synthetic
+WARSAW-005,Warsaw Charging Hub 5,warsaw,PlugSurfing,52.17838,21.06255,6,CCS,22,synthetic
+WARSAW-006,Warsaw Charging Hub 6,warsaw,E.ON Drive,52.19945,21.19929,5,CCS,150,synthetic
+WARSAW-007,Warsaw Charging Hub 7,warsaw,Enel X Way,52.24724,21.0714,5,ccs,150,synthetic
+WARSAW-008,Warsaw Charging Hub 8,warsaw,Shell Recharge,52.21738,21.01778,2,CCS,22,synthetic
+WARSAW-009,Warsaw Charging Hub 9,warsaw,Shell Recharge,52.24257,20.84359,6,CCS,11,synthetic
+WARSAW-010,Warsaw Charging Hub 10,warsaw,PlugSurfing,52.2475,21.051,6,Type 2,22,synthetic
+MADRID-004,Madrid Charging Hub 4,madrid,PlugSurfing,40.41329,-3.74305,2,CHAdeMO,150,synthetic
+COPENHAGEN-008,Copenhagen Charging Hub 8,copenhagen,PlugSurfing,55.68842,12.59428,3,ccs,50,synthetic
