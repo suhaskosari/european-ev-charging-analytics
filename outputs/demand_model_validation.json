@@ -1,0 +1,42 @@
+{
+  "recovery": [
+    {
+      "label": "weekend",
+      "truth": -0.24512245803298496,
+      "estimate": -0.23546871191811247,
+      "lo": -0.2700553242735237,
+      "hi": -0.20088209956270126,
+      "inside": true
+    },
+    {
+      "label": "cold hinge (per degree below 10 C)",
+      "truth": 0.014888612493750559,
+      "estimate": 0.013933506596933907,
+      "lo": 0.011690063974725554,
+      "hi": 0.01617694921914226,
+      "inside": true
+    },
+    {
+      "label": "congestion (per index point)",
+      "truth": 0.003,
+      "estimate": 0.002762691379220435,
+      "lo": 0.0016978909238770773,
+      "hi": 0.0038274918345637923,
+      "inside": true
+    },
+    {
+      "label": "precipitation (direct effect)",
+      "truth": 0.0,
+      "estimate": 0.0011968366411938026,
+      "lo": -0.0011150454145357467,
+      "hi": 0.003508718696923352,
+      "inside": true
+    }
+  ],
+  "n_inside": 4,
+  "mean_sessions": 8.38611491108071,
+  "ols_temp_pct_per_degree": -0.005591235940316316,
+  "dispersion": 1.0058356674788418,
+  "durbin_watson": 2.0148538410085273,
+  "corr_congestion_weekend": -0.7896552504964026
+}

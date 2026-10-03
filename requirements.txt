@@ -11,3 +11,4 @@ requests>=2.32
 matplotlib>=3.9
 folium>=0.17
 python-dotenv>=1.0
+pytest>=8.0

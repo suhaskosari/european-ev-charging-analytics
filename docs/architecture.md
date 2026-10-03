@@ -74,9 +74,10 @@ Lakehouse/Warehouse in a production deployment.
   API exists for these at the granularity this platform needs) but are
   seeded to correlate realistically: colder weather and higher traffic
   congestion both genuinely increase simulated charging demand, and
-  `stats_demand_drivers.py`'s OLS regression recovers exactly that
-  relationship, with p < 0.001 on both coefficients -- see
-  [docs/sample_insights.md](sample_insights.md).
+  the generator's parameters are known, so the analysis is validated against them: the original pooled OLS (`stats_demand_drivers.py`) was
+  significant but understated the cold-weather effect by roughly 2.7x, and the corrected Poisson model with city fixed effects
+  (`eval_demand_model.py`) recovers all four true parameters -- see
+  [outputs/demand_model_validation.md](../outputs/demand_model_validation.md).
 - **DuckDB locally, PostgreSQL-shaped in `sql/schema.sql`**: the dimensional
   model is documented as standard Postgres DDL for a production deployment;
   DuckDB exists purely so the repo is runnable by anyone who clones it, with
@@ -87,15 +88,13 @@ Lakehouse/Warehouse in a production deployment.
   the deliverable here is "which levers actually move charging demand,"
   which needs coefficients and p-values, not just a prediction.
   `forecasting.py` uses Holt-Winters (triple exponential smoothing) with
-  weekly seasonality -- appropriate for a signal this short (2 years) and
-  this seasonally regular, rather than reaching for a heavier model the data
-  volume doesn't justify.
-- **Geospatial analysis answers a concrete infrastructure question**:
-  `geospatial_analysis.py` doesn't just plot stations on a map -- it
-  clusters *demand* (session-volume-weighted station coordinates) and flags
-  cluster centroids more than 3km from the nearest existing station as
-  expansion candidates, which is the actual decision a network-planning
-  team would use this for.
+  weekly seasonality. `eval_forecast.py` backtests it (rolling origin, 8 cities x 12 origins): day-level WAPE is about 28%, MASE 0.71 against
+  seasonal-naive, because per-city daily counts are small -- see [outputs/forecast_backtest.md](../outputs/forecast_backtest.md).
+- **Geospatial analysis is a method demonstration, and is stress-tested as one**:
+  `geospatial_analysis.py` clusters session-volume-weighted station coordinates and flags
+  centroids more than 3km from the nearest station. `eval_geospatial.py` shuffles station demand 200 times: the flagged count is
+  indistinguishable from chance (p = 0.82), because the generator ties volume to power and connector count, never location, and because demand
+  measured at stations cannot reveal unserved areas. See [outputs/geospatial_stress_test.md](../outputs/geospatial_stress_test.md).
 - **Reproducible by construction**: `generate_data.py`, the regression, and
   the clustering are all seeded/deterministic, so re-running the pipeline
   from scratch reproduces the same numbers referenced in

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VoltGrid Analytics — European EV Charging Demand</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Validated analytics for a synthetic European EV charging network: demand drivers with parameter recovery, a backtested forecast, and an honest geospatial stress test.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>{{CSS}}</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand"><span class="brand-mark"></span>VoltGrid Analytics</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-links">
+      <a class="textlink" href="#demand">Demand</a>
+      <a class="textlink" href="#drivers">Drivers</a>
+      <a class="textlink" href="#forecast">Forecast</a>
+      <a class="textlink" href="#geo">Geospatial</a>
+      <a class="btn" href="https://github.com/suhaskosari/european-ev-charging-analytics" target="_blank" rel="noopener">View on GitHub ↗</a>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Synthetic sessions · real weather · portfolio project</div>
+    <h1>Every analytical claim here has been tested against ground truth.</h1>
+    <p class="lead">A charging network across 8 European cities, built with a dbt-tested star schema. Each model is checked against the effects the generator built in, or against a baseline it has to beat, and the result is reported even where it is unflattering. All figures are generated from pipeline outputs by <code class="mono">python/build_dashboard.py</code>.</p>
+    <div class="tag-row" id="tagRow"></div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+  </div>
+</div>
+
+<section id="demand">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">01</span>Demand</h2></div>
+      <div class="section-cap">Cleaned sessions from 80 stations, 2024–2025.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Monthly charging sessions, all cities</div>
+      <div class="panel-caption">Hover a point for the exact value</div>
+      <svg id="chartMonthly"></svg>
+    </div>
+    <div class="panel-grid" style="margin-top:18px;">
+      <div class="panel">
+        <div class="panel-title">Sessions by city</div>
+        <div class="panel-caption">Full 2-year window</div>
+        <svg id="chartCity"></svg>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Mean station utilization by city</div>
+        <div class="panel-caption">Share of connector-hours in use</div>
+        <svg id="chartUtil"></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="drivers">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">02</span>Demand drivers: parameter recovery</h2></div>
+      <div class="section-cap">The first regression looked significant but was wrong. A Poisson model with city effects recovers the true values.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">True effect vs estimate</div>
+      <div class="panel-caption" id="driversCaption"></div>
+      <table class="dq" id="driversTable"><thead><tr><th>Driver</th><th>True</th><th>Estimated</th><th>95% CI</th><th>Recovered</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</section>
+
+<section id="forecast">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">03</span>Forecast: backtested, not assumed</h2></div>
+      <div class="section-cap">Rolling-origin evaluation, 8 cities × 12 origins × 30-day horizon, scored on unseen days.</div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-title">Error by model (WAPE, lower is better)</div>
+        <div class="panel-caption">Total absolute error ÷ total actual sessions</div>
+        <svg id="chartWape"></svg>
+      </div>
+      <div class="panel">
+        <div class="panel-title">What this shows</div>
+        <div class="panel-caption">Read before quoting an accuracy figure</div>
+        <ul class="gov-list" id="forecastNotes"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="geo">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">04</span>Geospatial: a stress test</h2></div>
+      <div class="section-cap">Do "expansion candidates" reflect demand, or only the layout of the stations?</div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-title">Permutation test</div>
+        <div class="panel-caption">Station demand shuffled 200 times, analysis re-run each time</div>
+        <div class="gov-badge-panel" style="border:none;padding:0;" id="geoRows"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Verdict</div>
+        <div class="panel-caption">Method demonstration, not a siting recommendation</div>
+        <ul class="gov-list" id="geoNotes"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-row">
+      <div class="brand"><span class="brand-mark"></span>VoltGrid Analytics</div>
+      <div class="footer-links">
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics" target="_blank" rel="noopener">Repository</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/docs/architecture.md" target="_blank" rel="noopener">Architecture</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/docs/sample_insights.md" target="_blank" rel="noopener">Sample insights</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      </div>
+    </div>
+    <p class="footer-note">Charging sessions, stations, traffic, energy prices and EV registrations are synthetically generated. Daily weather is real, from the Open-Meteo historical archive. No proprietary data is used. Built by Suhas Kosari.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement, toggle = document.getElementById('themeToggle');
+  function applyTheme(t) { if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); else root.removeAttribute('data-theme'); }
+  try { var saved = localStorage.getItem('vga-theme'); if (saved) applyTheme(saved); } catch (e) {}
+  toggle.addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme');
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = (cur ? cur === 'dark' : dark) ? 'light' : 'dark';
+    applyTheme(next); try { localStorage.setItem('vga-theme', next); } catch (e) {}
+  });
+
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+  function text(x, y, s, cls, anchor) { var t = el('text', { x: x, y: y, class: cls || 'chart-label' }); if (anchor) t.setAttribute('text-anchor', anchor); t.textContent = s; return t; }
+  function svgTitle(n, s) { var t = el('title', {}); t.textContent = s; n.appendChild(t); return n; }
+
+  var DATA = {{DATA}};
+
+  var kg = document.getElementById('kpiGrid');
+  DATA.kpis.forEach(function (k) {
+    var d = document.createElement('div'); d.className = 'kpi';
+    d.innerHTML = '<div class="kpi-label">' + k.label + '</div><div class="kpi-value tabular ' + (k.cls || '') + '">' + k.value + '</div><div class="kpi-sub">' + k.sub + '</div>';
+    kg.appendChild(d);
+  });
+  var tr = document.getElementById('tagRow');
+  DATA.tags.forEach(function (t) { var s = document.createElement('span'); s.className = 'tag'; s.textContent = t; tr.appendChild(s); });
+
+  function horizontalBar(svgId, data, opts) {
+    opts = opts || {};
+    var svg = document.getElementById(svgId), width = 560, rowH = 34, labelW = opts.labelW || 96, valueW = 70, gapTop = 4;
+    var chartW = width - labelW - valueW, height = data.length * rowH + gapTop;
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    var max = Math.max.apply(null, data.map(function (d) { return d.value; })) * 1.08;
+    data.forEach(function (d, i) {
+      var y = gapTop + i * rowH, bw = Math.max(d.value > 0 ? 3 : 0, (d.value / max) * chartW), f = opts.fmt ? opts.fmt(d.value) : d.value;
+      svg.appendChild(text(labelW - 10, y + rowH / 2 + 4, d.label, 'chart-label', 'end'));
+      svg.appendChild(el('rect', { x: labelW, y: y + 8, width: chartW, height: rowH - 16, rx: 4, class: 'bar-track' }));
+      var bar = el('rect', { x: labelW, y: y + 8, width: bw, height: rowH - 16, rx: 4, class: d.cls || opts.cls || 'bar-1' });
+      svgTitle(bar, d.label + ': ' + f); svg.appendChild(bar);
+      svg.appendChild(text(labelW + bw + 8, y + rowH / 2 + 4, f, 'chart-value'));
+    });
+  }
+
+  function lineChart(svgId, pts) {
+    var svg = document.getElementById(svgId), width = 1120, height = 260, padL = 56, padB = 30, padT = 16, padR = 16;
+    var chartW = width - padL - padR, chartH = height - padT - padB;
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    var max = Math.max.apply(null, pts.map(function (d) { return d[1]; })) * 1.12, n = pts.length, stepX = chartW / (n - 1);
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (f) {
+      var y = padT + chartH - f * chartH;
+      svg.appendChild(el('line', { x1: padL, x2: width - padR, y1: y, y2: y, class: 'gridline' }));
+      svg.appendChild(text(padL - 8, y + 3, Math.round(f * max).toLocaleString(), 'chart-label', 'end'));
+    });
+    svg.appendChild(el('line', { x1: padL, x2: width - padR, y1: padT + chartH, y2: padT + chartH, class: 'axis-line' }));
+    var xy = pts.map(function (d, i) { return [padL + i * stepX, padT + chartH - (d[1] / max) * chartH]; });
+    var line = 'M ' + xy.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L ');
+    svg.appendChild(el('path', { d: line + ' L ' + xy[n - 1][0].toFixed(1) + ' ' + (padT + chartH) + ' L ' + xy[0][0].toFixed(1) + ' ' + (padT + chartH) + ' Z', class: 'area-path' }));
+    svg.appendChild(el('path', { d: line, class: 'line-path' }));
+    pts.forEach(function (d, i) {
+      var dot = el('circle', { cx: xy[i][0], cy: xy[i][1], r: 3.2, class: 'line-dot' });
+      svgTitle(dot, d[0] + ': ' + Math.round(d[1]).toLocaleString() + ' sessions'); svg.appendChild(dot);
+      if (i % 3 === 0 || i === n - 1) svg.appendChild(text(xy[i][0], height - 6, d[0].slice(0, 7), 'chart-label', 'middle'));
+    });
+  }
+
+  lineChart('chartMonthly', DATA.monthly);
+  horizontalBar('chartCity', DATA.cities, { labelW: 110, fmt: function (v) { return v.toLocaleString(); } });
+  horizontalBar('chartUtil', DATA.util, { cls: 'bar-3', labelW: 110, fmt: function (v) { return v.toFixed(2) + '%'; } });
+  horizontalBar('chartWape', DATA.wape, { labelW: 150, fmt: function (v) { return v.toFixed(1) + '%'; } });
+
+  document.getElementById('driversCaption').textContent = DATA.driversCaption;
+  var db = document.querySelector('#driversTable tbody');
+  DATA.drivers.forEach(function (r) {
+    var t = document.createElement('tr');
+    t.innerHTML = '<td>' + r.label + '</td><td class="n">' + r.truth + '</td><td class="n">' + r.est + '</td><td class="n">' + r.ci + '</td><td class="n">' + (r.inside ? '✓' : '✗') + '</td>';
+    db.appendChild(t);
+  });
+
+  function listInto(id, items) {
+    var ul = document.getElementById(id);
+    items.forEach(function (n) {
+      var li = document.createElement('li');
+      li.innerHTML = '<div class="gov-check">' + (n.ok ? '✓' : '!') + '</div><div><b>' + n.t + '</b><span>' + n.d + '</span></div>';
+      ul.appendChild(li);
+    });
+  }
+  listInto('forecastNotes', DATA.forecastNotes);
+  listInto('geoNotes', DATA.geoNotes);
+
+  var gr = document.getElementById('geoRows');
+  DATA.geoRows.forEach(function (r) {
+    var d = document.createElement('div'); d.className = 'gov-badge-row';
+    d.innerHTML = '<span class="dot"' + (r.warn ? ' style="background:var(--warning)"' : '') + '></span><span class="k">' + r.k + '</span><span class="v">' + r.v + '</span>';
+    gr.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>

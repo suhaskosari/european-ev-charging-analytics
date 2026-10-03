@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VoltGrid Analytics — European EV Charging Demand</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Validated analytics for a synthetic European EV charging network: demand drivers with parameter recovery, a backtested forecast, and an honest geospatial stress test.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg:            #0d0d0d;
+    --surface:       #1a1a19;
+    --surface-2:     #212120;
+    --text-primary:  #ffffff;
+    --text-secondary:#c3c2b7;
+    --text-muted:    #898781;
+    --grid:          #2c2c2a;
+    --baseline:      #383835;
+    --border:        rgba(255,255,255,0.10);
+    --accent:        #3987e5;
+    --accent-wash:   rgba(57,135,229,0.14);
+    --series-1:      #3987e5; /* blue   */
+    --series-2:      #d95926; /* orange */
+    --series-3:      #199e70; /* aqua   */
+    --series-4:      #c98500; /* yellow */
+    --series-5:      #d55181; /* magenta*/
+    --good:          #0ca30c;
+    --warning:       #fab219;
+    --serious:       #ec835a;
+    --critical:      #d03b3b;
+    --track:         rgba(255,255,255,0.06);
+  }
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg:            #f9f9f7;
+    --surface:       #fcfcfb;
+    --surface-2:     #f2f1ec;
+    --text-primary:  #0b0b0b;
+    --text-secondary:#52514e;
+    --text-muted:    #898781;
+    --grid:          #e1e0d9;
+    --baseline:      #c3c2b7;
+    --border:        rgba(11,11,11,0.10);
+    --accent:        #2a78d6;
+    --accent-wash:   rgba(42,120,214,0.09);
+    --series-1:      #2a78d6;
+    --series-2:      #eb6834;
+    --series-3:      #1baf7a;
+    --series-4:      #eda100;
+    --series-5:      #e87ba4;
+    --good:          #0ca30c;
+    --warning:       #fab219;
+    --serious:       #ec835a;
+    --critical:      #d03b3b;
+    --track:         rgba(11,11,11,0.05);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace; }
+  .tabular { font-variant-numeric: tabular-nums; }
+  h1, h2, h3 { text-wrap: balance; font-weight: 600; margin: 0; }
+  a { color: var(--accent); }
+  svg text { font-family: "IBM Plex Mono", ui-monospace, monospace; fill: var(--text-secondary); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding-inline: 20px; }
+
+  /* ---------- Nav ---------- */
+  .nav {
+    position: sticky; top: 0; z-index: 20;
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    display: flex; align-items: center; gap: 14px;
+    padding-block: 12px;
+  }
+  .brand { display: flex; align-items: center; gap: 9px; font-weight: 600; letter-spacing: 0.01em; white-space: nowrap; }
+  .brand-mark {
+    width: 20px; height: 20px; border-radius: 5px;
+    background: linear-gradient(135deg, var(--series-1), var(--series-3));
+    flex: none;
+  }
+  .nav-spacer { flex: 1; }
+  .nav-links { display: flex; align-items: center; gap: 16px; }
+  .nav-links a.textlink { color: var(--text-secondary); text-decoration: none; font-size: 13.5px; }
+  .nav-links a.textlink:hover { color: var(--text-primary); }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 13px; border-radius: 7px;
+    background: var(--surface-2); border: 1px solid var(--border);
+    color: var(--text-primary); text-decoration: none; font-size: 13px; font-weight: 500;
+    cursor: pointer;
+  }
+  .btn:hover { border-color: var(--accent); }
+  .theme-toggle {
+    width: 32px; height: 32px; padding: 0; justify-content: center;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 7px;
+    color: var(--text-secondary); cursor: pointer; font-size: 14px;
+  }
+
+  /* ---------- Hero ---------- */
+  .hero { padding-block: 46px 30px; border-bottom: 1px solid var(--border); }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 7px;
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 14px;
+  }
+  .eyebrow::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 3px var(--accent-wash); }
+  .hero h1 { font-size: clamp(28px, 4.2vw, 42px); line-height: 1.12; max-width: 18ch; }
+  .hero p.lead { color: var(--text-secondary); max-width: 62ch; margin-top: 16px; font-size: 16px; }
+  .tag-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+  .tag {
+    font-family: "IBM Plex Mono", monospace; font-size: 11.5px; padding: 4px 9px;
+    border: 1px solid var(--border); border-radius: 5px; color: var(--text-secondary);
+    background: var(--surface);
+  }
+
+  /* ---------- KPI strip ---------- */
+  .kpi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px; background: var(--border);
+    border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
+    margin-top: 30px;
+  }
+  .kpi { background: var(--surface); padding: 16px 18px; min-width: 0; }
+  .kpi-label { font-size: 11.5px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .kpi-value { font-family: "IBM Plex Mono", monospace; font-weight: 600; font-size: 25px; margin-top: 6px; }
+  .kpi-sub { font-size: 12px; color: var(--text-secondary); margin-top: 3px; }
+  .kpi-value.accent { color: var(--accent); }
+  .kpi-value.good { color: var(--good); }
+
+  /* ---------- Sections ---------- */
+  section { padding-block: 46px; border-bottom: 1px solid var(--border); }
+  section:last-of-type { border-bottom: none; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 22px; }
+  .section-head h2 { font-size: 22px; }
+  .section-head .num { font-family: "IBM Plex Mono", monospace; color: var(--accent); font-size: 13px; margin-right: 10px; }
+  .section-cap { color: var(--text-secondary); font-size: 13.5px; max-width: 56ch; }
+
+  .panel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+  .panel-grid.thirds { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 860px) { .panel-grid, .panel-grid.thirds { grid-template-columns: 1fr; } }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 20px 20px 16px; min-width: 0;
+  }
+  .panel-title { font-size: 14px; font-weight: 600; }
+  .panel-caption { font-size: 12px; color: var(--text-muted); margin-top: 3px; margin-bottom: 14px; }
+  .panel svg { display: block; width: 100%; height: auto; }
+
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; font-size: 12px; color: var(--text-secondary); }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+
+  .bar-track { fill: var(--track); }
+  .bar-1 { fill: var(--series-1); }
+  .bar-2 { fill: var(--series-2); }
+  .bar-3 { fill: var(--series-3); }
+  .bar-1:hover, .bar-2:hover, .bar-3:hover { opacity: 0.82; }
+  .chart-label { font-size: 11.5px; fill: var(--text-secondary); }
+  .chart-value { font-size: 11.5px; fill: var(--text-primary); font-weight: 600; }
+  .axis-line { stroke: var(--baseline); stroke-width: 1; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .line-path { fill: none; stroke: var(--series-1); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .area-path { fill: var(--series-1); opacity: 0.10; }
+  .line-dot { fill: var(--surface); stroke: var(--series-1); stroke-width: 2; }
+  .line-dot:hover { stroke-width: 3; }
+
+  /* ---------- Pipeline ---------- */
+  .pipeline { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  @media (max-width: 900px) { .pipeline { grid-template-columns: repeat(2, 1fr); } }
+  .pstep {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px 14px 12px; position: relative; min-width: 0;
+  }
+  .pstep .pnum {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--accent);
+    background: var(--accent-wash); display: inline-block; padding: 1px 7px; border-radius: 5px; margin-bottom: 9px;
+  }
+  .pstep h3 { font-size: 13.5px; }
+  .pstep p { font-size: 12px; color: var(--text-secondary); margin: 5px 0 0; overflow-wrap: break-word; }
+  .pstep code { font-family: "IBM Plex Mono", monospace; font-size: 11px; color: var(--text-muted); overflow-wrap: break-word; }
+
+  /* ---------- Findings cards ---------- */
+  .finding {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0;
+  }
+  .finding-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .finding-name { font-size: 13px; font-weight: 600; }
+  .pill {
+    font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 0.03em;
+    padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+  }
+  .pill-reject { background: rgba(12,163,12,0.14); color: var(--good); }
+  .pill-warn { background: rgba(250,178,25,0.14); color: var(--warning); }
+  .anom-dot { fill: var(--critical); stroke: var(--surface); stroke-width: 1.5; }
+  .anom-dot.spike { fill: var(--series-4); }
+  table.dq { width:100%; border-collapse:collapse; font-size:12.5px; }
+  table.dq td, table.dq th { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); vertical-align:top; }
+  table.dq th { color:var(--text-muted); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:.06em; }
+  table.dq td.n { font-family:"IBM Plex Mono",monospace; white-space:nowrap; }
+  .finding-hyp { font-size: 12px; color: var(--text-secondary); }
+  .finding-hyp b { color: var(--text-primary); font-weight: 600; }
+  .finding-stat { font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ---------- Governance ---------- */
+  .gov-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 22px; align-items: start; }
+  @media (max-width: 860px) { .gov-grid { grid-template-columns: 1fr; } }
+  .gov-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 14px; }
+  .gov-list li { display: flex; gap: 12px; }
+  .gov-check {
+    flex: none; width: 20px; height: 20px; border-radius: 50%; margin-top: 1px;
+    background: rgba(12,163,12,0.14); color: var(--good); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .gov-list b { display: block; font-size: 13.5px; }
+  .gov-list span { font-size: 12.5px; color: var(--text-secondary); }
+  .gov-badge-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px;
+  }
+  .gov-badge-row { display: flex; align-items: center; gap: 10px; padding-block: 10px; border-bottom: 1px dashed var(--border); }
+  .gov-badge-row:last-child { border-bottom: none; }
+  .gov-badge-row .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--good); flex: none; }
+  .gov-badge-row .k { font-size: 12.5px; color: var(--text-secondary); flex: 1; }
+  .gov-badge-row .v { font-family: "IBM Plex Mono", monospace; font-size: 12px; color: var(--text-primary); }
+
+  /* ---------- Confusion matrix ---------- */
+  .cm-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 4px; }
+  .cm-cell { border-radius: 8px; padding: 12px 14px; border: 1px solid var(--border); }
+  .cm-cell .cm-v { font-family: "IBM Plex Mono", monospace; font-size: 20px; font-weight: 700; }
+  .cm-cell .cm-k { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .cm-tn { background: var(--accent-wash); }
+  .cm-tp { background: rgba(12,163,12,0.12); }
+  .cm-tp .cm-v { color: var(--good); }
+  .cm-tn .cm-v { color: var(--accent); }
+  .cm-fp, .cm-fn { background: rgba(250,178,25,0.10); }
+  .cm-fp .cm-v, .cm-fn .cm-v { color: var(--warning); }
+
+  /* ---------- Footer ---------- */
+  footer { padding-block: 34px 50px; }
+  .footer-row { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .footer-links { display: flex; gap: 18px; }
+  .footer-links a { color: var(--text-secondary); text-decoration: none; font-size: 13px; }
+  .footer-links a:hover { color: var(--accent); }
+  .footer-note { color: var(--text-muted); font-size: 12px; margin-top: 14px; max-width: 70ch; }
+
+  @media (max-width: 640px) {
+    .hero { padding-block: 34px 24px; }
+    section { padding-block: 34px; }
+    .nav-links a.textlink { display: none; }
+    .nav-links { gap: 8px; }
+    .btn { padding: 6px 10px; font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="wrap nav-inner">
+    <div class="brand"><span class="brand-mark"></span>VoltGrid Analytics</div>
+    <div class="nav-spacer"></div>
+    <div class="nav-links">
+      <a class="textlink" href="#demand">Demand</a>
+      <a class="textlink" href="#drivers">Drivers</a>
+      <a class="textlink" href="#forecast">Forecast</a>
+      <a class="textlink" href="#geo">Geospatial</a>
+      <a class="btn" href="https://github.com/suhaskosari/european-ev-charging-analytics" target="_blank" rel="noopener">View on GitHub ↗</a>
+      <button class="theme-toggle" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+    </div>
+  </div>
+</div>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Synthetic sessions · real weather · portfolio project</div>
+    <h1>Every analytical claim here has been tested against ground truth.</h1>
+    <p class="lead">A charging network across 8 European cities, built with a dbt-tested star schema. Each model is checked against the effects the generator built in, or against a baseline it has to beat, and the result is reported even where it is unflattering. All figures are generated from pipeline outputs by <code class="mono">python/build_dashboard.py</code>.</p>
+    <div class="tag-row" id="tagRow"></div>
+    <div class="kpi-grid" id="kpiGrid"></div>
+  </div>
+</div>
+
+<section id="demand">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">01</span>Demand</h2></div>
+      <div class="section-cap">Cleaned sessions from 80 stations, 2024–2025.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">Monthly charging sessions, all cities</div>
+      <div class="panel-caption">Hover a point for the exact value</div>
+      <svg id="chartMonthly"></svg>
+    </div>
+    <div class="panel-grid" style="margin-top:18px;">
+      <div class="panel">
+        <div class="panel-title">Sessions by city</div>
+        <div class="panel-caption">Full 2-year window</div>
+        <svg id="chartCity"></svg>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Mean station utilization by city</div>
+        <div class="panel-caption">Share of connector-hours in use</div>
+        <svg id="chartUtil"></svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="drivers">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">02</span>Demand drivers: parameter recovery</h2></div>
+      <div class="section-cap">The first regression looked significant but was wrong. A Poisson model with city effects recovers the true values.</div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">True effect vs estimate</div>
+      <div class="panel-caption" id="driversCaption"></div>
+      <table class="dq" id="driversTable"><thead><tr><th>Driver</th><th>True</th><th>Estimated</th><th>95% CI</th><th>Recovered</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</section>
+
+<section id="forecast">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">03</span>Forecast: backtested, not assumed</h2></div>
+      <div class="section-cap">Rolling-origin evaluation, 8 cities × 12 origins × 30-day horizon, scored on unseen days.</div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-title">Error by model (WAPE, lower is better)</div>
+        <div class="panel-caption">Total absolute error ÷ total actual sessions</div>
+        <svg id="chartWape"></svg>
+      </div>
+      <div class="panel">
+        <div class="panel-title">What this shows</div>
+        <div class="panel-caption">Read before quoting an accuracy figure</div>
+        <ul class="gov-list" id="forecastNotes"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="geo">
+  <div class="wrap">
+    <div class="section-head">
+      <div><h2><span class="num">04</span>Geospatial: a stress test</h2></div>
+      <div class="section-cap">Do "expansion candidates" reflect demand, or only the layout of the stations?</div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-title">Permutation test</div>
+        <div class="panel-caption">Station demand shuffled 200 times, analysis re-run each time</div>
+        <div class="gov-badge-panel" style="border:none;padding:0;" id="geoRows"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Verdict</div>
+        <div class="panel-caption">Method demonstration, not a siting recommendation</div>
+        <ul class="gov-list" id="geoNotes"></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-row">
+      <div class="brand"><span class="brand-mark"></span>VoltGrid Analytics</div>
+      <div class="footer-links">
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics" target="_blank" rel="noopener">Repository</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/docs/architecture.md" target="_blank" rel="noopener">Architecture</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/docs/sample_insights.md" target="_blank" rel="noopener">Sample insights</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/LICENSE" target="_blank" rel="noopener">MIT License</a>
+      </div>
+    </div>
+    <p class="footer-note">Charging sessions, stations, traffic, energy prices and EV registrations are synthetically generated. Daily weather is real, from the Open-Meteo historical archive. No proprietary data is used. Built by Suhas Kosari.</p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var root = document.documentElement, toggle = document.getElementById('themeToggle');
+  function applyTheme(t) { if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); else root.removeAttribute('data-theme'); }
+  try { var saved = localStorage.getItem('vga-theme'); if (saved) applyTheme(saved); } catch (e) {}
+  toggle.addEventListener('click', function () {
+    var cur = root.getAttribute('data-theme');
+    var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var next = (cur ? cur === 'dark' : dark) ? 'light' : 'dark';
+    applyTheme(next); try { localStorage.setItem('vga-theme', next); } catch (e) {}
+  });
+
+  var NS = "http://www.w3.org/2000/svg";
+  function el(tag, attrs) { var e = document.createElementNS(NS, tag); for (var k in attrs) e.setAttribute(k, attrs[k]); return e; }
+  function text(x, y, s, cls, anchor) { var t = el('text', { x: x, y: y, class: cls || 'chart-label' }); if (anchor) t.setAttribute('text-anchor', anchor); t.textContent = s; return t; }
+  function svgTitle(n, s) { var t = el('title', {}); t.textContent = s; n.appendChild(t); return n; }
+
+  var DATA = {"kpis":[{"label":"Charging sessions","value":"49,042","sub":"80 stations \u00b7 8 cities"},{"label":"Energy delivered","value":"0.81 GWh","sub":"EUR 339k session revenue"},{"label":"dbt tests","value":"25/25","sub":"unique \u00b7 not-null \u00b7 FK","cls":"good"},{"label":"Driver parameters recovered","value":"4/4","sub":"truth inside 95% CI","cls":"accent"},{"label":"Forecast error (WAPE)","value":"27.9%","sub":"MASE 0.71 vs naive 0.99"}],"tags":["SQL","Python","dbt","DuckDB","PostgreSQL","Power BI","Azure Data Factory","Microsoft Fabric","Poisson GLM","Forecasting","Backtesting","Geospatial","GitHub Actions","Docker"],"monthly":[["2024-01-01",2291],["2024-02-01",2065],["2024-03-01",2065],["2024-04-01",2041],["2024-05-01",1993],["2024-06-01",1937],["2024-07-01",1964],["2024-08-01",2009],["2024-09-01",2013],["2024-10-01",1990],["2024-11-01",2056],["2024-12-01",2157],["2025-01-01",2302],["2025-02-01",1961],["2025-03-01",2111],["2025-04-01",1986],["2025-05-01",2047],["2025-06-01",1901],["2025-07-01",2068],["2025-08-01",1893],["2025-09-01",1970],["2025-10-01",2014],["2025-11-01",1998],["2025-12-01",2210]],"cities":[{"label":"Paris","value":7809},{"label":"Warsaw","value":6971},{"label":"Oslo","value":6557},{"label":"Copenhagen","value":5899},{"label":"Madrid","value":5812},{"label":"Stockholm","value":5436},{"label":"Amsterdam","value":5381},{"label":"Berlin","value":5177}],"util":[{"label":"Berlin","value":1.088634114153744},{"label":"Amsterdam","value":1.0685714285714294},{"label":"Oslo","value":0.9797008797654},{"label":"Stockholm","value":0.9673438900507925},{"label":"Copenhagen","value":0.8841307814992013},{"label":"Madrid","value":0.8840174165457135},{"label":"Paris","value":0.7483893257088401},{"label":"Warsaw","value":0.674326152304607}],"wape":[{"label":"holt winters damped","value":27.877193567788787,"cls":"bar-2"},{"label":"holt winters","value":27.935971235279723,"cls":"bar-1"},{"label":"flat 28d mean","value":29.389735901826818,"cls":"bar-2"},{"label":"weekday mean 4w","value":30.373511966485545,"cls":"bar-2"},{"label":"seasonal naive","value":38.8029366626571,"cls":"bar-2"}],"driversCaption":"The first pooled OLS put temperature at -0.6% of mean sessions per degree, a fraction of the true cold effect. This Poisson model has city fixed effects, a below-10\u00b0C hinge and robust errors.","drivers":[{"label":"weekend","truth":"-21.7%","est":"-21.0%","ci":"-23.7% to -18.2%","inside":true},{"label":"cold hinge (per degree below 10 C)","truth":"+1.5%","est":"+1.4%","ci":"+1.2% to +1.6%","inside":true},{"label":"congestion (per index point)","truth":"+0.3%","est":"+0.3%","ci":"+0.2% to +0.4%","inside":true},{"label":"precipitation (direct effect)","truth":"+0.0%","est":"+0.1%","ci":"-0.1% to +0.4%","inside":true}],"forecastNotes":[{"ok":true,"t":"Beats the naive baseline","d":"MASE 0.71 against seasonal-naive 0.99; only modestly better than a flat 28-day mean."},{"ok":false,"t":"Day-level error is about 28%","d":"Each city sees about 8 sessions a day, so Poisson noise sets a high floor. An earlier '5\u20138%' claim compared 30-day averages and is withdrawn."},{"ok":false,"t":"No weather input, point forecasts only","d":"Forecast temperature would help but is not available at prediction time in this dataset; intervals are not evaluated."}],"geoRows":[{"k":"Expansion candidates flagged","v":"2"},{"k":"Expected under shuffled demand","v":"2.7 (5\u201395%: 1\u20135)","warn":true},{"k":"Permutation p-value","v":"0.82","warn":true},{"k":"Demand vs distance-from-centre (Spearman)","v":"+0.17, p = 0.14"}],"geoNotes":[{"ok":false,"t":"Flags are explained by layout, not demand","d":"Shuffling which station is busy changes nothing: the candidates reflect where the stations are."},{"ok":false,"t":"No spatial demand exists in this data","d":"The generator ties volume to power and connector count only. Demand measured at stations can never reveal unserved areas."},{"ok":true,"t":"What it does demonstrate","d":"KMeans clustering, haversine coverage and an interactive map, plus the test that exposes their limits."}]};
+
+  var kg = document.getElementById('kpiGrid');
+  DATA.kpis.forEach(function (k) {
+    var d = document.createElement('div'); d.className = 'kpi';
+    d.innerHTML = '<div class="kpi-label">' + k.label + '</div><div class="kpi-value tabular ' + (k.cls || '') + '">' + k.value + '</div><div class="kpi-sub">' + k.sub + '</div>';
+    kg.appendChild(d);
+  });
+  var tr = document.getElementById('tagRow');
+  DATA.tags.forEach(function (t) { var s = document.createElement('span'); s.className = 'tag'; s.textContent = t; tr.appendChild(s); });
+
+  function horizontalBar(svgId, data, opts) {
+    opts = opts || {};
+    var svg = document.getElementById(svgId), width = 560, rowH = 34, labelW = opts.labelW || 96, valueW = 70, gapTop = 4;
+    var chartW = width - labelW - valueW, height = data.length * rowH + gapTop;
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    var max = Math.max.apply(null, data.map(function (d) { return d.value; })) * 1.08;
+    data.forEach(function (d, i) {
+      var y = gapTop + i * rowH, bw = Math.max(d.value > 0 ? 3 : 0, (d.value / max) * chartW), f = opts.fmt ? opts.fmt(d.value) : d.value;
+      svg.appendChild(text(labelW - 10, y + rowH / 2 + 4, d.label, 'chart-label', 'end'));
+      svg.appendChild(el('rect', { x: labelW, y: y + 8, width: chartW, height: rowH - 16, rx: 4, class: 'bar-track' }));
+      var bar = el('rect', { x: labelW, y: y + 8, width: bw, height: rowH - 16, rx: 4, class: d.cls || opts.cls || 'bar-1' });
+      svgTitle(bar, d.label + ': ' + f); svg.appendChild(bar);
+      svg.appendChild(text(labelW + bw + 8, y + rowH / 2 + 4, f, 'chart-value'));
+    });
+  }
+
+  function lineChart(svgId, pts) {
+    var svg = document.getElementById(svgId), width = 1120, height = 260, padL = 56, padB = 30, padT = 16, padR = 16;
+    var chartW = width - padL - padR, chartH = height - padT - padB;
+    svg.setAttribute('viewBox', '0 0 ' + width + ' ' + height);
+    var max = Math.max.apply(null, pts.map(function (d) { return d[1]; })) * 1.12, n = pts.length, stepX = chartW / (n - 1);
+    [0, 0.25, 0.5, 0.75, 1].forEach(function (f) {
+      var y = padT + chartH - f * chartH;
+      svg.appendChild(el('line', { x1: padL, x2: width - padR, y1: y, y2: y, class: 'gridline' }));
+      svg.appendChild(text(padL - 8, y + 3, Math.round(f * max).toLocaleString(), 'chart-label', 'end'));
+    });
+    svg.appendChild(el('line', { x1: padL, x2: width - padR, y1: padT + chartH, y2: padT + chartH, class: 'axis-line' }));
+    var xy = pts.map(function (d, i) { return [padL + i * stepX, padT + chartH - (d[1] / max) * chartH]; });
+    var line = 'M ' + xy.map(function (p) { return p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' L ');
+    svg.appendChild(el('path', { d: line + ' L ' + xy[n - 1][0].toFixed(1) + ' ' + (padT + chartH) + ' L ' + xy[0][0].toFixed(1) + ' ' + (padT + chartH) + ' Z', class: 'area-path' }));
+    svg.appendChild(el('path', { d: line, class: 'line-path' }));
+    pts.forEach(function (d, i) {
+      var dot = el('circle', { cx: xy[i][0], cy: xy[i][1], r: 3.2, class: 'line-dot' });
+      svgTitle(dot, d[0] + ': ' + Math.round(d[1]).toLocaleString() + ' sessions'); svg.appendChild(dot);
+      if (i % 3 === 0 || i === n - 1) svg.appendChild(text(xy[i][0], height - 6, d[0].slice(0, 7), 'chart-label', 'middle'));
+    });
+  }
+
+  lineChart('chartMonthly', DATA.monthly);
+  horizontalBar('chartCity', DATA.cities, { labelW: 110, fmt: function (v) { return v.toLocaleString(); } });
+  horizontalBar('chartUtil', DATA.util, { cls: 'bar-3', labelW: 110, fmt: function (v) { return v.toFixed(2) + '%'; } });
+  horizontalBar('chartWape', DATA.wape, { labelW: 150, fmt: function (v) { return v.toFixed(1) + '%'; } });
+
+  document.getElementById('driversCaption').textContent = DATA.driversCaption;
+  var db = document.querySelector('#driversTable tbody');
+  DATA.drivers.forEach(function (r) {
+    var t = document.createElement('tr');
+    t.innerHTML = '<td>' + r.label + '</td><td class="n">' + r.truth + '</td><td class="n">' + r.est + '</td><td class="n">' + r.ci + '</td><td class="n">' + (r.inside ? '✓' : '✗') + '</td>';
+    db.appendChild(t);
+  });
+
+  function listInto(id, items) {
+    var ul = document.getElementById(id);
+    items.forEach(function (n) {
+      var li = document.createElement('li');
+      li.innerHTML = '<div class="gov-check">' + (n.ok ? '✓' : '!') + '</div><div><b>' + n.t + '</b><span>' + n.d + '</span></div>';
+      ul.appendChild(li);
+    });
+  }
+  listInto('forecastNotes', DATA.forecastNotes);
+  listInto('geoNotes', DATA.geoNotes);
+
+  var gr = document.getElementById('geoRows');
+  DATA.geoRows.forEach(function (r) {
+    var d = document.createElement('div'); d.className = 'gov-badge-row';
+    d.innerHTML = '<span class="dot"' + (r.warn ? ' style="background:var(--warning)"' : '') + '></span><span class="k">' + r.k + '</span><span class="v">' + r.v + '</span>';
+    gr.appendChild(d);
+  });
+})();
+</script>
+</body>
+</html>
