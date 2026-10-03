@@ -1,0 +1,611 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>VoltGrid Explorer — European EV Charging Demand</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Interactive explorer for a synthetic European EV charging network: filter demand, test a demand what-if, inspect a backtested forecast, and see the stress tests behind each claim.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>{{CSS}}
+  /* ---------- Explorer additions ---------- */
+  .tabs { display: flex; gap: 4px; overflow-x: auto; padding-block: 10px 0; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab { appearance: none; background: none; border: 0; border-bottom: 2px solid transparent; color: var(--text-secondary);
+         font: inherit; font-size: 13.5px; font-weight: 500; padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+  .tab:hover { color: var(--text-primary); }
+  .tab[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--accent); }
+  .view { display: none; padding-block: 26px 40px; }
+  .view.active { display: block; }
+  .filters { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px;
+             display: grid; gap: 14px; margin-bottom: 18px; }
+  .filter-row { display: flex; flex-wrap: wrap; gap: 14px 22px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .field > label, .field > .lbl { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+  select, input[type="date"] {
+    background: var(--surface-2); color: var(--text-primary); border: 1px solid var(--border); border-radius: 7px;
+    padding: 7px 9px; font: inherit; font-size: 13px; min-height: 34px; }
+  select:focus-visible, input:focus-visible, button:focus-visible, .chip:focus-visible, .tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { appearance: none; display: inline-flex; align-items: center; gap: 7px; background: var(--surface-2); color: var(--text-secondary);
+          border: 1px solid var(--border); border-radius: 20px; padding: 5px 11px; font: inherit; font-size: 12.5px; cursor: pointer; }
+  .chip .sw { width: 9px; height: 9px; border-radius: 50%; background: var(--c); opacity: .35; }
+  .chip[aria-pressed="true"] { color: var(--text-primary); border-color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface-2)); }
+  .chip[aria-pressed="true"] .sw { opacity: 1; }
+  .chip.ghost { border-style: dashed; }
+  .seg { display: inline-flex; border: 1px solid var(--border); border-radius: 7px; overflow: hidden; }
+  .seg button { appearance: none; background: var(--surface-2); color: var(--text-secondary); border: 0; padding: 7px 11px; font: inherit; font-size: 12.5px; cursor: pointer; border-right: 1px solid var(--border); }
+  .seg button:last-child { border-right: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent-wash); color: var(--text-primary); }
+  .toggle { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); cursor: pointer; min-height: 34px; }
+  .chart-box { position: relative; height: 320px; }
+  .chart-box.tall { height: 380px; }
+  .chart-box.short { height: 240px; }
+  .empty { display: none; position: absolute; inset: 0; align-items: center; justify-content: center; color: var(--text-muted); font-size: 13px; text-align: center; padding: 20px; }
+  .banner { border: 1px solid var(--border); border-left: 3px solid var(--warning); background: color-mix(in srgb, var(--warning) 8%, var(--surface));
+            border-radius: 8px; padding: 12px 14px; font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+  .banner b { color: var(--text-primary); }
+  .banner.good { border-left-color: var(--good); background: color-mix(in srgb, var(--good) 7%, var(--surface)); }
+  #map { height: 520px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface-2); }
+  .leaflet-tile-pane { filter: brightness(.72) contrast(1.05) saturate(.8); }
+  :root[data-theme="light"] .leaflet-tile-pane { filter: none; }
+  .leaflet-popup-content { font-family: "IBM Plex Sans", sans-serif; font-size: 12.5px; color: #111; }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+  .slider-row { display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+  .slider-row .val { font-family: "IBM Plex Mono", monospace; font-size: 13px; color: var(--text-primary); }
+  .slider-row input { grid-column: 1 / -1; }
+  .big { font-family: "IBM Plex Mono", monospace; font-size: 40px; font-weight: 600; line-height: 1.1; }
+  .delta-row { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-bottom: 1px dashed var(--border); font-size: 13px; color: var(--text-secondary); }
+  .delta-row:last-child { border-bottom: 0; }
+  .delta-row .v { font-family: "IBM Plex Mono", monospace; color: var(--text-primary); }
+  .meter { height: 8px; border-radius: 4px; background: var(--track); overflow: hidden; margin-top: 5px; }
+  .meter > i { display: block; height: 100%; background: var(--series-1); border-radius: 4px; }
+  .meter.hi > i { background: var(--series-3); }
+  .model-row { margin-bottom: 14px; }
+  .model-row .top { display: flex; justify-content: space-between; font-size: 12.5px; color: var(--text-secondary); }
+  .model-row .top b { color: var(--text-primary); font-weight: 500; }
+  .note { color: var(--text-muted); font-size: 12px; margin-top: 10px; }
+  .note a { color: var(--accent); }
+  table.dq td.ok { color: var(--good); font-weight: 600; }
+  .hero-sm { padding-block: 32px 8px; }
+  .hero-sm h1 { font-size: clamp(24px, 3.6vw, 34px); max-width: 26ch; line-height: 1.15; }
+  .hero-sm p.lead { color: var(--text-secondary); max-width: 66ch; margin-top: 12px; font-size: 15px; }
+  noscript .banner { margin: 20px; }
+</style>
+</head>
+<body>
+
+<div class="nav">
+  <div class="wrap">
+    <div class="nav-inner">
+      <div class="brand"><span class="brand-mark"></span>VoltGrid Explorer</div>
+      <div class="nav-spacer"></div>
+      <div class="nav-links">
+        <a class="btn" href="https://github.com/suhaskosari/european-ev-charging-analytics" target="_blank" rel="noopener">GitHub ↗</a>
+        <button class="theme-toggle" id="themeToggle" title="Toggle theme" aria-label="Toggle theme">◐</button>
+      </div>
+    </div>
+    <div class="tabs" role="tablist" id="tabs">
+      <button class="tab" role="tab" data-view="explore" aria-selected="true">Explore demand</button>
+      <button class="tab" role="tab" data-view="drivers" aria-selected="false">Drivers &amp; what-if</button>
+      <button class="tab" role="tab" data-view="forecast" aria-selected="false">Forecast</button>
+      <button class="tab" role="tab" data-view="map" aria-selected="false">Network map</button>
+      <button class="tab" role="tab" data-view="validation" aria-selected="false">Validation</button>
+    </div>
+  </div>
+</div>
+
+<noscript><div class="banner"><b>JavaScript is required</b> for this interactive explorer. The same findings are in the repository README.</div></noscript>
+
+<main class="wrap">
+  <div class="hero-sm">
+    <div class="eyebrow">Synthetic sessions · real weather · portfolio project</div>
+    <h1>Explore the network, then see which conclusions survive testing.</h1>
+    <p class="lead">Filter 80 stations across 8 cities, play with the fitted demand model, and inspect the forecast and map. The Validation tab shows what each analysis was checked against, including the parts that failed.</p>
+  </div>
+
+  <!-- shared filters for Explore + Drivers -->
+  <div class="filters" id="globalFilters" aria-label="Filters">
+    <div class="field">
+      <span class="lbl">Cities</span>
+      <div class="chips" id="cityChips"></div>
+    </div>
+    <div class="filter-row">
+      <div class="field"><label for="dFrom">From</label><input type="date" id="dFrom"></div>
+      <div class="field"><label for="dTo">To</label><input type="date" id="dTo"></div>
+      <div class="field" id="metricField"><span class="lbl">Metric</span>
+        <div class="seg" id="metricSeg">
+          <button data-v="s" aria-pressed="true">Sessions</button><button data-v="e" aria-pressed="false">Energy (kWh)</button><button data-v="r" aria-pressed="false">Revenue (€)</button>
+        </div></div>
+      <div class="field" id="smoothField"><span class="lbl">Resolution</span>
+        <div class="seg" id="smoothSeg">
+          <button data-v="d" aria-pressed="false">Daily</button><button data-v="w" aria-pressed="true">7-day avg</button><button data-v="m" aria-pressed="false">Monthly</button>
+        </div></div>
+      <label class="toggle" id="splitToggle"><input type="checkbox" id="splitBox"> Split by city</label>
+      <button class="btn" id="resetBtn" type="button">Reset</button>
+    </div>
+  </div>
+
+  <!-- EXPLORE -->
+  <section class="view active" id="view-explore" aria-label="Explore demand">
+    <div class="kpi-grid" id="kpis"></div>
+    <div class="panel" style="margin-top:18px;">
+      <div class="panel-title" id="mainTitle">Demand over time</div>
+      <div class="panel-caption">Hover for exact values. Click a city chip above to include or exclude it.</div>
+      <div class="chart-box tall"><canvas id="cMain" role="img" aria-label="Demand over time"></canvas><div class="empty" id="emptyMain">Select at least one city and a valid date range.</div></div>
+    </div>
+    <div class="panel-grid" style="margin-top:18px;">
+      <div class="panel"><div class="panel-title">Total by city</div><div class="panel-caption" id="capCity"></div>
+        <div class="chart-box short"><canvas id="cCity" role="img" aria-label="Total by city"></canvas></div></div>
+      <div class="panel"><div class="panel-title">Average by day of week</div><div class="panel-caption">Per city-day, in the selected range</div>
+        <div class="chart-box short"><canvas id="cDow" role="img" aria-label="Average by day of week"></canvas></div></div>
+    </div>
+  </section>
+
+  <!-- DRIVERS -->
+  <section class="view" id="view-drivers" aria-label="Drivers and what-if">
+    <div class="banner good"><b>How to read this.</b> Curves come from the fitted Poisson model with city fixed effects, which recovered all four true parameters (see Validation). The effects are ones the synthetic generator built in, so this shows the method works, not how real EV demand behaves.</div>
+    <div class="panel-grid">
+      <div class="panel">
+        <div class="panel-title">Daily sessions vs temperature</div>
+        <div class="panel-caption">Each dot is one city-day (filters above apply). Lines are model-expected sessions at median congestion.</div>
+        <div class="chart-box tall"><canvas id="cScatter" role="img" aria-label="Sessions versus temperature scatter"></canvas><div class="empty" id="emptyScatter">Select at least one city.</div></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">What-if: expected sessions for one city-day</div>
+        <div class="panel-caption">Adjust conditions; the model returns expected sessions and each factor's effect.</div>
+        <div class="filter-row" style="margin-bottom:14px;">
+          <div class="field"><label for="wiCity">City</label><select id="wiCity"></select></div>
+          <label class="toggle"><input type="checkbox" id="wiWeekend"> Weekend</label>
+        </div>
+        <div class="slider-row"><label for="wiTemp">Temperature</label><span class="val" id="wiTempV"></span><input type="range" id="wiTemp" min="-15" max="35" step="1" value="10"></div>
+        <div class="slider-row" style="margin-top:12px;"><label for="wiCong">Congestion index</label><span class="val" id="wiCongV"></span><input type="range" id="wiCong" min="5" max="100" step="1" value="50"></div>
+        <div class="slider-row" style="margin-top:12px;"><label for="wiPrec">Precipitation</label><span class="val" id="wiPrecV"></span><input type="range" id="wiPrec" min="0" max="30" step="1" value="0"></div>
+        <div style="margin:18px 0 6px;"><div class="kpi-label">Expected sessions that day</div><div class="big tabular" id="wiOut"></div><div class="kpi-sub" id="wiSub"></div></div>
+        <div id="wiRows"></div>
+        <p class="note">Baseline = 10 °C, congestion 50, weekday, no rain. Real daily counts vary around this expectation (about ±√n from Poisson noise).</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FORECAST -->
+  <section class="view" id="view-forecast" aria-label="Forecast">
+    <div class="filters">
+      <div class="filter-row">
+        <div class="field"><label for="fcCity">City</label><select id="fcCity"></select></div>
+        <div class="field"><span class="lbl">History shown</span>
+          <div class="seg" id="fcHist"><button data-v="60" aria-pressed="false">60 days</button><button data-v="120" aria-pressed="true">120 days</button><button data-v="365" aria-pressed="false">1 year</button></div></div>
+      </div>
+    </div>
+    <div class="panel-grid">
+      <div class="panel" style="grid-column: 1 / -1;">
+        <div class="panel-title" id="fcTitle">30-day forecast</div>
+        <div class="panel-caption">Holt-Winters with weekly seasonality, fitted on the full history. Thin line = daily actual, thick = 7-day average, dashed = forecast.</div>
+        <div class="chart-box tall"><canvas id="cForecast" role="img" aria-label="Forecast chart"></canvas></div>
+      </div>
+    </div>
+    <div class="panel-grid" style="margin-top:18px;">
+      <div class="panel">
+        <div class="panel-title">How accurate is it? (backtest)</div>
+        <div class="panel-caption" id="fcBtCap"></div>
+        <div id="fcBt"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-title">Reading the error</div>
+        <div class="panel-caption">Read before quoting an accuracy number</div>
+        <ul class="gov-list" id="fcNotes"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAP -->
+  <section class="view" id="view-map" aria-label="Network map">
+    <div class="banner"><b>Method demonstration, not a siting recommendation.</b> <span id="mapBanner"></span></div>
+    <div class="filters"><div class="filter-row">
+      <div class="field"><label for="mapCity">Zoom to</label><select id="mapCity"></select></div>
+      <label class="toggle"><input type="checkbox" id="mapCand" checked> Show &quot;expansion candidates&quot;</label>
+      <div class="field"><span class="lbl">Size markers by</span>
+        <div class="seg" id="mapSize"><button data-v="s" aria-pressed="true">Sessions</button><button data-v="u" aria-pressed="false">Utilization</button><button data-v="k" aria-pressed="false">Power (kW)</button></div></div>
+    </div></div>
+    <div id="map" role="application" aria-label="Station map"></div>
+    <p class="note">Station coordinates are synthetic (no Open Charge Map key). Click a marker for details. Map tiles © OpenStreetMap contributors.</p>
+  </section>
+
+  <!-- VALIDATION -->
+  <section class="view" id="view-validation" aria-label="Validation">
+    <div class="panel-grid">
+      <div class="panel" style="grid-column: 1 / -1;">
+        <div class="panel-title">1. Demand drivers: truth vs estimate</div>
+        <div class="panel-caption" id="valDrvCap"></div>
+        <table class="dq" id="valDrv"><thead><tr><th>Driver</th><th>True effect</th><th>Estimated</th><th>95% CI</th><th>Recovered</th></tr></thead><tbody></tbody></table>
+        <p class="note">Full write-up: <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/outputs/demand_model_validation.md" target="_blank" rel="noopener">outputs/demand_model_validation.md</a></p>
+      </div>
+    </div>
+    <div class="panel-grid" style="margin-top:18px;">
+      <div class="panel">
+        <div class="panel-title">2. Forecast backtest by model</div>
+        <div class="panel-caption">WAPE across 8 cities × 12 origins × 30-day horizon (lower is better)</div>
+        <div class="chart-box short"><canvas id="cWape" role="img" aria-label="Backtest error by model"></canvas></div>
+        <p class="note"><a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/outputs/forecast_backtest.md" target="_blank" rel="noopener">outputs/forecast_backtest.md</a></p>
+      </div>
+      <div class="panel">
+        <div class="panel-title">3. Geospatial permutation test</div>
+        <div class="panel-caption" id="geoCap"></div>
+        <div class="chart-box short"><canvas id="cNull" role="img" aria-label="Permutation null distribution"></canvas></div>
+        <p class="note"><a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/outputs/geospatial_stress_test.md" target="_blank" rel="noopener">outputs/geospatial_stress_test.md</a></p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="footer-row">
+      <div class="brand"><span class="brand-mark"></span>VoltGrid Explorer</div>
+      <div class="footer-links">
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics" target="_blank" rel="noopener">Repository</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/docs/architecture.md" target="_blank" rel="noopener">Architecture</a>
+        <a href="https://github.com/suhaskosari/european-ev-charging-analytics/blob/master/docs/sample_insights.md" target="_blank" rel="noopener">Insights</a>
+      </div>
+    </div>
+    <p class="footer-note">Charging sessions, stations, traffic, prices and registrations are synthetic; daily weather is real (Open-Meteo). Built by Suhas Kosari.</p>
+  </footer>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script type="application/json" id="data">{{DATA}}</script>
+<script>
+(function () {
+  "use strict";
+  var D = JSON.parse(document.getElementById('data').textContent);
+  var PALETTE = ['#3987e5', '#d95926', '#199e70', '#c98500', '#d55181', '#8a6fd1', '#4fb0c6', '#9aa24a'];
+  var CITIES = D.cities.map(function (c, i) { c.color = PALETTE[i % PALETTE.length]; return c; });
+  var BY_KEY = {}; CITIES.forEach(function (c) { BY_KEY[c.key] = c; });
+  var DAYS = D.days, N = DAYS.length;
+  var DOW = DAYS.map(function (d) { return (new Date(d + 'T00:00:00Z').getUTCDay() + 6) % 7; }); // Mon=0
+  var MONTH = DAYS.map(function (d) { return d.slice(0, 7); });
+  var METRIC = { s: { label: 'Sessions', fmt: fmt0 }, e: { label: 'Energy (kWh)', fmt: fmt0 }, r: { label: 'Revenue (EUR)', fmt: fmt0 } };
+  var DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+  function fmt0(v) { return Math.round(v).toLocaleString(); }
+  function fmt1(v) { return (Math.round(v * 10) / 10).toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 }); }
+  function $(id) { return document.getElementById(id); }
+  function css(name) { return getComputedStyle(document.documentElement).getPropertyValue(name).trim(); }
+  function mk(tag, props, html) { var e = document.createElement(tag); for (var k in props) e.setAttribute(k, props[k]); if (html != null) e.innerHTML = html; return e; }
+
+  var HAS_CHART = typeof Chart !== 'undefined', HAS_MAP = typeof L !== 'undefined';
+  if (!HAS_CHART) {
+    ['cMain', 'cCity', 'cDow', 'cScatter', 'cForecast', 'cWape', 'cNull'].forEach(function (id) {
+      var c = $(id); if (c) c.parentNode.innerHTML = '<div class="empty" style="display:flex">Charts could not load (offline or blocked CDN). Findings are in the README.</div>';
+    });
+  }
+
+  /* ---------------- theme ---------------- */
+  var root = document.documentElement;
+  function applyTheme(t) { if (t === 'light' || t === 'dark') root.setAttribute('data-theme', t); else root.removeAttribute('data-theme'); }
+  try { var saved = localStorage.getItem('vge-theme'); if (saved) applyTheme(saved); } catch (e) {}
+  $('themeToggle').addEventListener('click', function () {
+    var next = root.getAttribute('data-theme') === 'light' ? 'dark' : 'light'; // the page's default theme is dark
+    applyTheme(next); try { localStorage.setItem('vge-theme', next); } catch (e) {}
+    renderAll();
+  });
+
+  /* ---------------- state ---------------- */
+  var state = { cities: new Set(CITIES.map(function (c) { return c.key; })), from: DAYS[0], to: DAYS[N - 1], metric: 's', smooth: 'w', split: false };
+  var charts = {};
+
+  function setChart(id, cfg) {
+    if (!HAS_CHART) return;
+    if (charts[id]) charts[id].destroy();
+    charts[id] = new Chart($(id), cfg);
+  }
+  function baseOpts(extra) {
+    var grid = css('--grid'), txt = css('--text-secondary');
+    var o = {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: txt, boxWidth: 10, boxHeight: 10, usePointStyle: true, font: { size: 12 } } },
+        tooltip: { backgroundColor: css('--surface-2'), titleColor: css('--text-primary'), bodyColor: txt, borderColor: css('--border'), borderWidth: 1, padding: 10 } },
+      scales: { x: { grid: { color: grid }, ticks: { color: txt, maxRotation: 0, autoSkipPadding: 18 } }, y: { grid: { color: grid }, ticks: { color: txt }, beginAtZero: true } }
+    };
+    return Object.assign(o, extra || {});
+  }
+
+  function range() {
+    var i0 = Math.max(0, DAYS.indexOf(state.from)), i1 = DAYS.indexOf(state.to);
+    if (i1 < 0) i1 = N - 1;
+    return i0 <= i1 ? [i0, i1] : null;
+  }
+  function selected() { return CITIES.filter(function (c) { return state.cities.has(c.key); }); }
+
+  function seriesFor(key, metric, i0, i1) { return D.series[key][metric].slice(i0, i1 + 1); }
+  function rolling(a, w) {
+    var out = [], sum = 0;
+    for (var i = 0; i < a.length; i++) { sum += a[i]; if (i >= w) sum -= a[i - w]; out.push(i >= w - 1 ? sum / w : null); }
+    return out;
+  }
+  function monthly(vals, idxs) {
+    var m = {}, order = [];
+    idxs.forEach(function (di, k) { var key = MONTH[di]; if (!(key in m)) { m[key] = 0; order.push(key); } m[key] += vals[k]; });
+    return { labels: order, values: order.map(function (k) { return m[k]; }) };
+  }
+
+  /* ---------------- filters UI ---------------- */
+  function buildFilters() {
+    var chips = $('cityChips');
+    var all = mk('button', { 'class': 'chip ghost', type: 'button' }, 'All'), none = mk('button', { 'class': 'chip ghost', type: 'button' }, 'None');
+    all.onclick = function () { CITIES.forEach(function (c) { state.cities.add(c.key); }); syncChips(); renderAll(); };
+    none.onclick = function () { state.cities.clear(); syncChips(); renderAll(); };
+    chips.appendChild(all); chips.appendChild(none);
+    CITIES.forEach(function (c) {
+      var b = mk('button', { 'class': 'chip', type: 'button', 'data-k': c.key, 'aria-pressed': 'true' }, '<span class="sw"></span>' + c.name);
+      b.style.setProperty('--c', c.color);
+      b.onclick = function () { if (state.cities.has(c.key)) state.cities.delete(c.key); else state.cities.add(c.key); syncChips(); renderAll(); };
+      chips.appendChild(b);
+    });
+    $('dFrom').min = $('dTo').min = DAYS[0]; $('dFrom').max = $('dTo').max = DAYS[N - 1];
+    $('dFrom').value = state.from; $('dTo').value = state.to;
+    $('dFrom').onchange = function () { state.from = this.value || DAYS[0]; renderAll(); };
+    $('dTo').onchange = function () { state.to = this.value || DAYS[N - 1]; renderAll(); };
+    segBind('metricSeg', function (v) { state.metric = v; renderAll(); });
+    segBind('smoothSeg', function (v) { state.smooth = v; renderAll(); });
+    $('splitBox').onchange = function () { state.split = this.checked; renderAll(); };
+    $('resetBtn').onclick = function () {
+      state.cities = new Set(CITIES.map(function (c) { return c.key; })); state.from = DAYS[0]; state.to = DAYS[N - 1];
+      state.metric = 's'; state.smooth = 'w'; state.split = false;
+      $('dFrom').value = state.from; $('dTo').value = state.to; $('splitBox').checked = false;
+      segSet('metricSeg', 's'); segSet('smoothSeg', 'w'); syncChips(); renderAll();
+    };
+  }
+  function syncChips() {
+    document.querySelectorAll('#cityChips .chip[data-k]').forEach(function (b) { b.setAttribute('aria-pressed', state.cities.has(b.getAttribute('data-k')) ? 'true' : 'false'); });
+  }
+  function segBind(id, cb) {
+    $(id).querySelectorAll('button').forEach(function (b) { b.onclick = function () { segSet(id, b.getAttribute('data-v')); cb(b.getAttribute('data-v')); }; });
+  }
+  function segSet(id, v) { $(id).querySelectorAll('button').forEach(function (b) { b.setAttribute('aria-pressed', b.getAttribute('data-v') === v ? 'true' : 'false'); }); }
+
+  /* ---------------- EXPLORE ---------------- */
+  function renderExplore() {
+    var r = range(), sel = selected();
+    var kp = $('kpis'); kp.innerHTML = '';
+    var empty = !r || !sel.length;
+    $('emptyMain').style.display = empty ? 'flex' : 'none';
+    if (empty) { if (charts.cMain) { charts.cMain.destroy(); charts.cMain = null; } return; }
+    var i0 = r[0], i1 = r[1], nd = i1 - i0 + 1;
+
+    var tot = { s: 0, e: 0, r: 0 }, perCity = [];
+    sel.forEach(function (c) {
+      var t = {}; ['s', 'e', 'r'].forEach(function (m) { t[m] = seriesFor(c.key, m, i0, i1).reduce(function (a, b) { return a + b; }, 0); tot[m] += t[m]; });
+      perCity.push({ c: c, t: t });
+    });
+    var kdefs = [
+      ['Sessions', fmt0(tot.s), nd + ' days · ' + sel.length + ' cities'],
+      ['Energy', fmt0(tot.e / 1000) + ' MWh', fmt0(tot.e / Math.max(tot.s, 1)) + ' kWh per session'],
+      ['Revenue', '€' + fmt0(tot.r), '€' + (tot.r / Math.max(tot.e, 1)).toFixed(2) + ' per kWh'],
+      ['Stations', fmt0(D.stations.filter(function (s) { return state.cities.has(s.city); }).length), 'in the selected cities'],
+      ['Per city-day', fmt1(tot.s / (nd * sel.length)), 'sessions on average'],
+      ['Busiest city', perCity.slice().sort(function (a, b) { return b.t.s - a.t.s; })[0].c.name, 'by sessions in range']
+    ];
+    kdefs.forEach(function (k) { kp.appendChild(mk('div', { 'class': 'kpi' }, '<div class="kpi-label">' + k[0] + '</div><div class="kpi-value tabular" style="font-size:22px">' + k[1] + '</div><div class="kpi-sub">' + k[2] + '</div>')); });
+
+    // main chart
+    var m = state.metric, idxs = []; for (var i = i0; i <= i1; i++) idxs.push(i);
+    var datasets = [], labels;
+    function transform(vals) {
+      if (state.smooth === 'm') { var mm = monthly(vals, idxs); labels = mm.labels; return mm.values; }
+      labels = idxs.map(function (i) { return DAYS[i]; });
+      return state.smooth === 'w' ? rolling(vals, 7) : vals;
+    }
+    if (state.split) {
+      sel.forEach(function (c) {
+        datasets.push({ label: c.name, data: transform(seriesFor(c.key, m, i0, i1)), borderColor: c.color, backgroundColor: c.color, borderWidth: 1.8, pointRadius: state.smooth === 'm' ? 3 : 0, tension: 0.15, spanGaps: true });
+      });
+    } else {
+      var sum = new Array(nd).fill(0);
+      sel.forEach(function (c) { seriesFor(c.key, m, i0, i1).forEach(function (v, k) { sum[k] += v; }); });
+      datasets.push({ label: 'Total (' + sel.length + ' cities)', data: transform(sum), borderColor: css('--series-1'), backgroundColor: css('--accent-wash'), fill: true, borderWidth: 2, pointRadius: state.smooth === 'm' ? 3 : 0, tension: 0.15, spanGaps: true });
+    }
+    $('mainTitle').textContent = METRIC[m].label + ' over time · ' + ({ d: 'daily', w: '7-day average', m: 'monthly total' }[state.smooth]);
+    var o = baseOpts(); o.plugins.tooltip.callbacks = { label: function (c) { return c.dataset.label + ': ' + fmt1(c.parsed.y); } };
+    setChart('cMain', { type: 'line', data: { labels: labels, datasets: datasets }, options: o });
+
+    // by city
+    var sorted = perCity.slice().sort(function (a, b) { return b.t[m] - a.t[m]; });
+    $('capCity').textContent = METRIC[m].label + ' in the selected range';
+    var oc = baseOpts({ indexAxis: 'y', interaction: { mode: 'nearest', intersect: true } }); oc.plugins.legend = { display: false };
+    oc.plugins.tooltip.callbacks = { label: function (c) { return fmt0(c.parsed.x); } };
+    setChart('cCity', { type: 'bar', data: { labels: sorted.map(function (x) { return x.c.name; }), datasets: [{ data: sorted.map(function (x) { return x.t[m]; }), backgroundColor: sorted.map(function (x) { return x.c.color; }), borderRadius: 4 }] }, options: oc });
+
+    // dow
+    var dowSum = [0, 0, 0, 0, 0, 0, 0], dowN = [0, 0, 0, 0, 0, 0, 0];
+    sel.forEach(function (c) { var v = seriesFor(c.key, m, i0, i1); v.forEach(function (x, k) { var d = DOW[i0 + k]; dowSum[d] += x; dowN[d] += 1; }); });
+    var od = baseOpts({ interaction: { mode: 'nearest', intersect: true } }); od.plugins.legend = { display: false };
+    od.plugins.tooltip.callbacks = { label: function (c) { return fmt1(c.parsed.y) + ' per city-day'; } };
+    setChart('cDow', { type: 'bar', data: { labels: DOW_LABELS, datasets: [{ data: dowSum.map(function (s, d) { return s / Math.max(dowN[d], 1); }), backgroundColor: DOW_LABELS.map(function (_, d) { return d >= 5 ? css('--series-2') : css('--series-1'); }), borderRadius: 4 }] }, options: od });
+  }
+
+  /* ---------------- DRIVERS ---------------- */
+  var P = D.model.params, MEAN_S = D.model.mean_sessions;
+  function cityAlpha(key) { var k = 'C(city_key)[T.' + key + ']'; return P.Intercept + (k in P ? P[k] : 0); }
+  function expected(key, temp, cong, wk, prec) {
+    return Math.exp(cityAlpha(key) + P.cold_deg * Math.max(0, 10 - temp) + P.congestion_index * cong + P.is_weekend * (wk ? 1 : 0) + P.precipitation_mm * prec);
+  }
+  function renderScatter() {
+    var r = range(), sel = selected();
+    var empty = !r || !sel.length; $('emptyScatter').style.display = empty ? 'flex' : 'none';
+    if (empty) { if (charts.cScatter) { charts.cScatter.destroy(); charts.cScatter = null; } return; }
+    var datasets = [];
+    sel.forEach(function (c) {
+      var pts = [];
+      for (var i = r[0]; i <= r[1]; i++) pts.push({ x: D.series[c.key].t[i], y: D.series[c.key].s[i], d: DAYS[i] });
+      datasets.push({ type: 'scatter', label: c.name, data: pts, backgroundColor: c.color + '66', borderColor: c.color + '00', pointRadius: 2.4, pointHoverRadius: 5 });
+    });
+    // binned means make the trend readable through the dense cloud of integer counts
+    var bins = {};
+    sel.forEach(function (c) { for (var i = r[0]; i <= r[1]; i++) { var tt = D.series[c.key].t[i], b = Math.floor(tt / 3) * 3 + 1.5; (bins[b] = bins[b] || []).push(D.series[c.key].s[i]); } });
+    var binPts = Object.keys(bins).map(Number).sort(function (a, b) { return a - b; }).filter(function (b) { return bins[b].length >= 15; })
+      .map(function (b) { return { x: b, y: bins[b].reduce(function (a, v) { return a + v; }, 0) / bins[b].length, n: bins[b].length }; });
+    datasets.push({ type: 'scatter', label: 'Binned mean (3 °C bins)', data: binPts, backgroundColor: css('--text-primary'), borderColor: css('--bg'), borderWidth: 2, pointRadius: 5.5, pointHoverRadius: 7, order: -2 });
+    var congMed = D.model.cong_median, temps = []; for (var t = -15; t <= 30; t += 1) temps.push(t);
+    [[false, 'Model: weekday', css('--text-primary'), []], [true, 'Model: weekend', css('--warning'), [6, 4]]].forEach(function (cfg) {
+      datasets.push({ type: 'line', label: cfg[1], data: temps.map(function (t) { return { x: t, y: sel.reduce(function (a, c) { return a + expected(c.key, t, congMed, cfg[0], 0); }, 0) / sel.length }; }),
+        borderColor: cfg[2], borderWidth: 2.4, borderDash: cfg[3], pointRadius: 0, tension: 0.2, order: -1 });
+    });
+    var o = baseOpts({ interaction: { mode: 'nearest', intersect: true } });
+    o.scales.x = { type: 'linear', title: { display: true, text: 'Average temperature (°C)', color: css('--text-secondary') }, grid: { color: css('--grid') }, ticks: { color: css('--text-secondary') } };
+    o.scales.y.title = { display: true, text: 'Sessions per city-day', color: css('--text-secondary') };
+    o.plugins.tooltip.callbacks = { label: function (c) { var p = c.raw; return c.dataset.type === 'line' ? c.dataset.label + ': ' + fmt1(p.y) : p.n ? 'Binned mean ' + fmt1(p.y) + ' (' + p.n + ' city-days)' : c.dataset.label + ' · ' + (p.d || '') + ' · ' + p.x + ' °C · ' + p.y + ' sessions'; } };
+    setChart('cScatter', { data: { datasets: datasets }, options: o });
+  }
+  function buildWhatIf() {
+    var sel = $('wiCity'); CITIES.forEach(function (c) { sel.appendChild(mk('option', { value: c.key }, c.name)); });
+    ['wiCity', 'wiWeekend', 'wiTemp', 'wiCong', 'wiPrec'].forEach(function (id) { $(id).addEventListener('input', renderWhatIf); $(id).addEventListener('change', renderWhatIf); });
+  }
+  function renderWhatIf() {
+    var key = $('wiCity').value, t = +$('wiTemp').value, c = +$('wiCong').value, p = +$('wiPrec').value, wk = $('wiWeekend').checked;
+    $('wiTempV').textContent = t + ' °C'; $('wiCongV').textContent = c; $('wiPrecV').textContent = p + ' mm';
+    var e = expected(key, t, c, wk, p), base = expected(key, 10, 50, false, 0);
+    $('wiOut').textContent = fmt1(e);
+    var d = (e / base - 1) * 100;
+    $('wiSub').textContent = (d >= 0 ? '+' : '') + fmt1(d) + '% vs baseline (' + fmt1(base) + ' sessions)';
+    var rows = [
+      ['Cold: ' + Math.max(0, 10 - t) + ' °C below 10', (Math.exp(P.cold_deg * Math.max(0, 10 - t)) - 1) * 100],
+      ['Congestion ' + (c - 50 >= 0 ? '+' : '') + (c - 50) + ' vs 50', (Math.exp(P.congestion_index * (c - 50)) - 1) * 100],
+      ['Weekend', wk ? (Math.exp(P.is_weekend) - 1) * 100 : 0],
+      ['Rain ' + p + ' mm (direct effect)', (Math.exp(P.precipitation_mm * p) - 1) * 100]
+    ];
+    $('wiRows').innerHTML = rows.map(function (r) { return '<div class="delta-row"><span>' + r[0] + '</span><span class="v">' + (r[1] >= 0 ? '+' : '') + fmt1(r[1]) + '%</span></div>'; }).join('');
+  }
+
+  /* ---------------- FORECAST ---------------- */
+  var fcHist = 120;
+  function buildForecast() {
+    var sel = $('fcCity'); sel.appendChild(mk('option', { value: '_all' }, 'All cities (sum)'));
+    CITIES.forEach(function (c) { sel.appendChild(mk('option', { value: c.key }, c.name)); });
+    sel.onchange = renderForecast;
+    $('fcHist').querySelectorAll('button').forEach(function (b) { b.onclick = function () { fcHist = +b.getAttribute('data-v'); segSet('fcHist', b.getAttribute('data-v')); renderForecast(); }; });
+    var wl = D.backtest.all, best = Object.keys(wl).sort(function (a, b) { return wl[a] - wl[b]; })[0];
+    $('fcNotes').innerHTML = [
+      [true, 'Beats the naive baseline', 'MASE ' + D.backtest.mase.holt_winters.toFixed(2) + ' against ' + D.backtest.mase.seasonal_naive.toFixed(2) + ' for repeating last week. Only modestly better than a flat 28-day mean.'],
+      [false, 'Day-level error is about ' + Math.round(wl.holt_winters * 100) + '%', 'Each city sees about ' + Math.round(MEAN_S) + ' sessions a day, so random Poisson noise sets a high floor. An earlier "5–8%" claim compared 30-day averages and was withdrawn.'],
+      [false, 'Point forecast only', 'No weather input and no prediction intervals. The best single model in the backtest is ' + best.replace(/_/g, ' ') + '.']
+    ].map(function (n) { return '<li><div class="gov-check">' + (n[0] ? '✓' : '!') + '</div><div><b>' + n[1] + '</b><span>' + n[2] + '</span></div></li>'; }).join('');
+  }
+  function renderForecast() {
+    var key = $('fcCity').value, i1 = N - 1, i0 = Math.max(0, N - fcHist);
+    var actual, fc;
+    if (key === '_all') {
+      actual = []; for (var i = 0; i < N; i++) actual.push(CITIES.reduce(function (a, c) { return a + D.series[c.key].s[i]; }, 0));
+      fc = D.forecast._all;
+    } else { actual = D.series[key].s; fc = D.forecast[key]; }
+    var name = key === '_all' ? 'All cities' : BY_KEY[key].name;
+    $('fcTitle').textContent = name + ': 30-day forecast';
+    var ma = rolling(actual, 7);
+    var labels = DAYS.slice(i0).concat(fc.dates), nA = N - i0;
+    var pad = function (a) { return a.concat(new Array(fc.dates.length).fill(null)); };
+    var o = baseOpts(); o.plugins.tooltip.callbacks = { label: function (c) { return c.parsed.y == null ? null : c.dataset.label + ': ' + fmt1(c.parsed.y); } };
+    var linkPt = new Array(nA - 1).fill(null).concat([ma[N - 1]]).concat(fc.vals);
+    setChart('cForecast', { type: 'line', data: { labels: labels, datasets: [
+      { label: 'Daily actual', data: pad(actual.slice(i0)), borderColor: css('--series-1') + '77', borderWidth: 1, pointRadius: 0, tension: 0 },
+      { label: '7-day average', data: pad(ma.slice(i0)), borderColor: css('--series-1'), borderWidth: 2.4, pointRadius: 0, tension: 0.2 },
+      { label: 'Forecast', data: linkPt, borderColor: css('--series-2'), borderDash: [7, 4], borderWidth: 2.4, pointRadius: 0, tension: 0.2 }] }, options: o });
+    var bt = key === '_all' ? D.backtest.all : D.backtest.city[key];
+    $('fcBtCap').textContent = (key === '_all' ? 'All cities' : name) + ' · WAPE, lower is better · 12 rolling origins × 30-day horizon';
+    var max = Math.max.apply(null, Object.values(bt));
+    $('fcBt').innerHTML = Object.keys(bt).sort(function (a, b) { return bt[a] - bt[b]; }).map(function (m, i) {
+      return '<div class="model-row"><div class="top"><span>' + m.replace(/_/g, ' ') + (i === 0 ? ' <b>(best)</b>' : '') + '</span><b>' + (bt[m] * 100).toFixed(1) + '%</b></div><div class="meter' + (i === 0 ? ' hi' : '') + '"><i style="width:' + (bt[m] / max * 100) + '%"></i></div></div>';
+    }).join('');
+  }
+
+  /* ---------------- MAP ---------------- */
+  var map, stLayer, candLayer, mapSize = 's';
+  function buildMap() {
+    if (!HAS_MAP) { $('map').innerHTML = '<div class="empty" style="display:flex;position:static;height:100%">Map library could not load (offline or blocked CDN).</div>'; return; }
+    var sel = $('mapCity'); sel.appendChild(mk('option', { value: '_all' }, 'All of Europe'));
+    CITIES.forEach(function (c) { sel.appendChild(mk('option', { value: c.key }, c.name)); });
+    map = L.map('map', { scrollWheelZoom: false }).setView([52, 12], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap contributors' }).addTo(map);
+    map.on('click', function () { map.scrollWheelZoom.enable(); });
+    stLayer = L.layerGroup().addTo(map); candLayer = L.layerGroup().addTo(map);
+    sel.onchange = function () {
+      if (this.value === '_all') map.setView([52, 12], 4);
+      else { var c = D.cities.filter(function (x) { return x.key === sel.value; })[0]; map.setView([c.lat, c.lon], 10); }
+    };
+    $('mapCand').onchange = renderMap;
+    $('mapSize').querySelectorAll('button').forEach(function (b) { b.onclick = function () { mapSize = b.getAttribute('data-v'); segSet('mapSize', mapSize); renderMap(); }; });
+    var g = D.geo;
+    $('mapBanner').textContent = 'The analysis flags ' + g.observed + ' cluster centroids more than 3 km from a station, but shuffling station demand gives ' + g.null_mean.toFixed(1) + ' on average (permutation p = ' + g.p_value.toFixed(2) + '). The flags reflect station layout, not demand. See the Validation tab.';
+  }
+  function renderMap() {
+    if (!HAS_MAP) return;
+    stLayer.clearLayers(); candLayer.clearLayers();
+    var key = { s: 'sessions', u: 'util', k: 'kw' }[mapSize], vals = D.stations.map(function (s) { return s[key]; }), mx = Math.max.apply(null, vals);
+    D.stations.forEach(function (s) {
+      var rad = 5 + 12 * Math.sqrt(s[key] / mx), col = BY_KEY[s.city].color;
+      L.circleMarker([s.lat, s.lon], { radius: rad, color: col, fillColor: col, fillOpacity: 0.55, weight: 1.5 })
+        .bindPopup('<b>' + s.name + '</b><br>' + BY_KEY[s.city].name + ' · ' + s.operator + '<br>' + s.kw + ' kW · ' + s.conn + ' connectors<br>' + fmt0(s.sessions) + ' sessions · ' + (s.util * 100).toFixed(2) + '% utilization').addTo(stLayer);
+    });
+    if ($('mapCand').checked) D.candidates.filter(function (c) { return c.flag; }).forEach(function (c) {
+      L.marker([c.lat, c.lon], { icon: L.divIcon({ className: '', html: '<div style="width:16px;height:16px;border-radius:3px;background:#d03b3b;border:2px solid #fff;box-shadow:0 0 0 1px #0006"></div>', iconSize: [16, 16], iconAnchor: [8, 8] }) })
+        .bindPopup('<b>"Expansion candidate"</b><br>' + c.km.toFixed(2) + ' km from the nearest station<br><i>Not distinguishable from chance (see Validation)</i>').addTo(candLayer);
+    });
+  }
+
+  /* ---------------- VALIDATION ---------------- */
+  function renderValidation() {
+    var pct = function (x) { var v = (Math.exp(x) - 1) * 100; return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; };
+    $('valDrvCap').textContent = 'The first pooled OLS put temperature at ' + (D.model.ols_temp_pct_per_degree * 100).toFixed(1) + '% of mean sessions per degree, a fraction of the true cold effect. This Poisson model with city fixed effects, a below-10 °C hinge and robust errors recovers ' + D.model.n_inside + ' of ' + D.model.recovery.length + ' parameters inside the 95% interval.';
+    var tb = $('valDrv').querySelector('tbody'); tb.innerHTML = '';
+    D.model.recovery.forEach(function (r) {
+      tb.appendChild(mk('tr', {}, '<td>' + r.label + '</td><td class="n">' + pct(r.truth) + '</td><td class="n">' + pct(r.estimate) + '</td><td class="n">' + pct(r.lo) + ' to ' + pct(r.hi) + '</td><td class="n ok">' + (r.inside ? '✓' : '✗') + '</td>'));
+    });
+    if (!HAS_CHART) return;
+    var wl = D.backtest.all, ms = Object.keys(wl).sort(function (a, b) { return wl[a] - wl[b]; });
+    var ow = baseOpts({ indexAxis: 'y', interaction: { mode: 'nearest', intersect: true } }); ow.plugins.legend = { display: false };
+    ow.plugins.tooltip.callbacks = { label: function (c) { return (c.parsed.x * 100).toFixed(1) + '% WAPE'; } };
+    ow.scales.x.ticks.callback = function (v) { return (v * 100).toFixed(0) + '%'; };
+    setChart('cWape', { type: 'bar', data: { labels: ms.map(function (m) { return m.replace(/_/g, ' '); }), datasets: [{ data: ms.map(function (m) { return wl[m]; }), backgroundColor: ms.map(function (m) { return m === 'holt_winters' ? css('--series-1') : css('--series-2'); }), borderRadius: 4 }] }, options: ow });
+
+    var g = D.geo, mxv = Math.max.apply(null, g.null.concat([g.observed])), bins = new Array(mxv + 1).fill(0);
+    g.null.forEach(function (v) { bins[v]++; });
+    $('geoCap').textContent = 'Candidates flagged when station demand is shuffled (200 runs). Observed: ' + g.observed + ' · p = ' + g.p_value.toFixed(2) + ' · demand vs distance-from-centre ρ = ' + g.pooled_rho.toFixed(2) + ' (p = ' + g.pooled_p.toFixed(2) + ').';
+    var on = baseOpts({ interaction: { mode: 'nearest', intersect: true } }); on.plugins.legend = { display: false };
+    on.plugins.tooltip.callbacks = { label: function (c) { return c.parsed.y + ' of 200 runs' + (c.dataIndex === g.observed ? ' (observed value)' : ''); } };
+    on.scales.x.title = { display: true, text: 'Candidates flagged', color: css('--text-secondary') };
+    setChart('cNull', { type: 'bar', data: { labels: bins.map(function (_, i) { return i; }), datasets: [{ data: bins, backgroundColor: bins.map(function (_, i) { return i === g.observed ? css('--critical') : css('--series-1') + '99'; }), borderRadius: 3 }] }, options: on });
+  }
+
+  /* ---------------- views ---------------- */
+  var active = 'explore';
+  function renderAll() {
+    $('globalFilters').style.display = (active === 'explore' || active === 'drivers') ? '' : 'none';
+    $('metricField').style.display = $('smoothField').style.display = $('splitToggle').style.display = active === 'explore' ? '' : 'none';
+    if (active === 'explore') renderExplore();
+    if (active === 'drivers') { renderScatter(); renderWhatIf(); }
+    if (active === 'forecast') renderForecast();
+    if (active === 'map') { renderMap(); if (map) setTimeout(function () { map.invalidateSize(); }, 50); }
+    if (active === 'validation') renderValidation();
+  }
+  function show(v, push) {
+    active = v;
+    document.querySelectorAll('.tab').forEach(function (t) { t.setAttribute('aria-selected', t.getAttribute('data-view') === v ? 'true' : 'false'); });
+    document.querySelectorAll('.view').forEach(function (s) { s.classList.toggle('active', s.id === 'view-' + v); });
+    if (push) history.replaceState(null, '', '#' + v);
+    renderAll();
+  }
+  document.querySelectorAll('.tab').forEach(function (t) { t.onclick = function () { show(t.getAttribute('data-view'), true); }; });
+  document.getElementById('tabs').addEventListener('keydown', function (e) {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab')), i = tabs.indexOf(document.activeElement);
+    if (i < 0 || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft')) return;
+    var n = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length]; n.focus(); show(n.getAttribute('data-view'), true);
+  });
+
+  buildFilters(); buildWhatIf(); buildForecast(); buildMap();
+  var h = location.hash.replace('#', '');
+  show(['explore', 'drivers', 'forecast', 'map', 'validation'].indexOf(h) >= 0 ? h : 'explore', false);
+})();
+</script>
+</body>
+</html>

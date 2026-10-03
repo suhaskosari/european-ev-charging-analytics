@@ -101,7 +101,7 @@ def main():
          "because demand measured at stations can only show where chargers already are."]
     md = "\n".join(L)
     (OUT_DIR / "geospatial_stress_test.json").write_text(json.dumps({
-        "observed": observed, "null_mean": float(null.mean()), "null_p5": float(np.percentile(null, 5)), "null_p95": float(np.percentile(null, 95)),
+        "observed": observed, "null": [int(x) for x in null], "null_mean": float(null.mean()), "null_p5": float(np.percentile(null, 5)), "null_p95": float(np.percentile(null, 95)),
         "p_value": p_value, "pooled_rho": float(pooled_rho), "pooled_p": float(pooled_p), "sensitivity": {str(k): v for k, v in sens.items()}}, indent=2), encoding="utf-8")
     (OUT_DIR / "geospatial_stress_test.md").write_text(md, encoding="utf-8")
     print(md)

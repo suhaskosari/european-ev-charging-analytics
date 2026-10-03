@@ -33,6 +33,20 @@
       "inside": true
     }
   ],
+  "params": {
+    "Intercept": 1.883524914394656,
+    "C(city_key)[T.berlin]": -0.04843517652365729,
+    "C(city_key)[T.copenhagen]": 0.08286747803083051,
+    "C(city_key)[T.madrid]": 0.09342986091826702,
+    "C(city_key)[T.oslo]": 0.15046526139068744,
+    "C(city_key)[T.paris]": 0.37649972071191795,
+    "C(city_key)[T.stockholm]": -0.024254615680058045,
+    "C(city_key)[T.warsaw]": 0.24226177184301445,
+    "cold_deg": 0.013933506596933907,
+    "precipitation_mm": 0.0011968366411938026,
+    "congestion_index": 0.002762691379220435,
+    "is_weekend": -0.23546871191811247
+  },
   "n_inside": 4,
   "mean_sessions": 8.38611491108071,
   "ols_temp_pct_per_degree": -0.005591235940316316,

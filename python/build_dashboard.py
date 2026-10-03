@@ -1,6 +1,8 @@
 """
-Builds docs/index.html (the GitHub Pages dashboard) from the warehouse and the validation outputs.
-Nothing on the page is hand-typed. Re-run after the eval_* scripts.
+Builds docs/index.html, the interactive GitHub Pages explorer, from the warehouse and the validation outputs.
+
+The page is one self-contained file: all data is embedded as JSON, so it works from GitHub Pages or a local
+file with no backend. Nothing on it is hand-typed; re-run after the eval_* scripts.
 
 Run:
     python python/build_dashboard.py
@@ -11,77 +13,80 @@ import duckdb
 import numpy as np
 import pandas as pd
 
-from common import BASE, DB_PATH, OUT_DIR
+from common import BASE, CITIES, DB_PATH, OUT_DIR
 
 DOCS = BASE / "docs"
 BUILD = DOCS / "_build"
-pct = lambda x: f"{np.expm1(x):+.1%}"
+
+
+def r2(x, d=2):
+    return None if pd.isna(x) else round(float(x), d)
 
 
 def build_data() -> dict:
     con = duckdb.connect(str(DB_PATH), read_only=True)
-    head = con.execute("""select count(*) s, count(distinct station_id) st, sum(energy_kwh) kwh, sum(cost_eur) rev
-                          from main_marts.fct_charging_sessions""").df().iloc[0]
-    monthly = con.execute("""select strftime(date_trunc('month', session_date), '%Y-%m-%d') m, count(*) n
-                             from main_marts.fct_charging_sessions group by 1 order by 1""").fetchall()
-    by_city = con.execute("""select c.city_name, count(*) n from main_marts.fct_charging_sessions s
-                             join main_marts.dim_station c using (station_id) group by 1 order by 2 desc""").fetchall()
-    util = con.execute("""select city_name, avg(utilization_rate) * 100 u from main_analytics.station_utilization
-                          group by 1 order by 2 desc""").fetchall()
-    weather_src = con.execute("select data_source, count(*) from main_marts.fct_weather_daily group by 1").fetchall()
+    daily = con.execute("""
+        select city_key, strftime(date, '%Y-%m-%d') d, sessions_count s, total_energy_kwh e, total_revenue_eur r,
+               temp_avg_c t, precipitation_mm p, congestion_index c
+        from main_analytics.city_daily_demand order by city_key, date""").df()
+    st = con.execute("""
+        select s.station_id, s.city_key, s.station_name, s.operator, s.latitude, s.longitude, s.power_kw, s.num_connectors,
+               coalesce(sum(u.sessions_count), 0) sessions, coalesce(avg(u.utilization_rate), 0) util
+        from main_marts.dim_station s left join main_analytics.station_utilization u using (station_id)
+        group by all order by s.station_id""").df()
     con.close()
+
+    days = sorted(daily["d"].unique())
+    series = {}
+    for key, g in daily.groupby("city_key"):
+        g = g.set_index("d").reindex(days)
+        series[key] = {
+            "s": [int(v) for v in g["s"].fillna(0)],
+            "e": [round(float(v), 1) for v in g["e"].fillna(0)],
+            "r": [round(float(v), 1) for v in g["r"].fillna(0)],
+            "t": [r2(v, 1) for v in g["t"].ffill().bfill()],
+            "p": [r2(v, 1) or 0 for v in g["p"].fillna(0)],
+            "c": [r2(v, 1) for v in g["c"].ffill().bfill()],
+        }
+
+    cities = [{"key": k, "name": v[0], "lat": v[3], "lon": v[4]} for k, v in CITIES.items()]
+
+    fc = pd.read_csv(OUT_DIR / "charging_demand_forecast.csv")
+    forecast = {k: {"dates": g["date"].tolist(), "vals": [round(float(x), 2) for x in g["forecast_sessions"]]} for k, g in fc.groupby("city_key")}
+    tot = fc.groupby("date")["forecast_sessions"].sum()
+    forecast["_all"] = {"dates": tot.index.tolist(), "vals": [round(float(x), 2) for x in tot.values]}
+
+    bt = pd.read_csv(OUT_DIR / "forecast_backtest_detail.csv")
+    all_w = (bt.groupby("model")["abs_err"].sum() / bt.groupby("model")["actual_sum"].sum()).round(4).to_dict()
+    city_w = {c: ((g.groupby("model")["abs_err"].sum() / g.groupby("model")["actual_sum"].sum()).round(4).to_dict()) for c, g in bt.groupby("city")}
+    mase = bt.groupby("model")["mase"].mean().round(3).to_dict()
 
     dm = json.loads((OUT_DIR / "demand_model_validation.json").read_text())
     geo = json.loads((OUT_DIR / "geospatial_stress_test.json").read_text())
-    bt = pd.read_csv(OUT_DIR / "forecast_backtest_detail.csv")
-    wape = (bt.groupby("model")["abs_err"].sum() / bt.groupby("model")["actual_sum"].sum() * 100).sort_values()
-    mase = bt.groupby("model")["mase"].mean()
-    real_weather = sum(n for s, n in weather_src if "synthetic" not in str(s).lower())
+    cand = pd.read_csv(OUT_DIR / "station_expansion_candidates.csv")
 
     return {
-        "kpis": [
-            {"label": "Charging sessions", "value": f"{int(head.s):,}", "sub": f"{int(head.st)} stations · 8 cities"},
-            {"label": "Energy delivered", "value": f"{head.kwh/1e6:.2f} GWh", "sub": f"EUR {head.rev/1e3:,.0f}k session revenue"},
-            {"label": "dbt tests", "value": "25/25", "sub": "unique · not-null · FK", "cls": "good"},
-            {"label": "Driver parameters recovered", "value": f"{dm['n_inside']}/{len(dm['recovery'])}", "sub": "truth inside 95% CI", "cls": "accent"},
-            {"label": "Forecast error (WAPE)", "value": f"{wape['holt_winters']:.1f}%", "sub": f"MASE {mase['holt_winters']:.2f} vs naive {mase['seasonal_naive']:.2f}"},
-        ],
-        "tags": ["SQL", "Python", "dbt", "DuckDB", "PostgreSQL", "Power BI", "Azure Data Factory", "Microsoft Fabric",
-                 "Poisson GLM", "Forecasting", "Backtesting", "Geospatial", "GitHub Actions", "Docker"],
-        "monthly": [[m, n] for m, n in monthly],
-        "cities": [{"label": c, "value": int(n)} for c, n in by_city],
-        "util": [{"label": c, "value": float(u)} for c, u in util],
-        "wape": [{"label": m.replace("_", " "), "value": float(w), "cls": "bar-1" if m == "holt_winters" else "bar-2"} for m, w in wape.items()],
-        "driversCaption": (f"The first pooled OLS put temperature at {dm['ols_temp_pct_per_degree']:+.1%} of mean sessions per degree, "
-                           "a fraction of the true cold effect. This Poisson model has city fixed effects, a below-10°C hinge and robust errors."),
-        "drivers": [{"label": r["label"], "truth": pct(r["truth"]), "est": pct(r["estimate"]),
-                     "ci": f"{pct(r['lo'])} to {pct(r['hi'])}", "inside": r["inside"]} for r in dm["recovery"]],
-        "forecastNotes": [
-            {"ok": True, "t": "Beats the naive baseline", "d": f"MASE {mase['holt_winters']:.2f} against seasonal-naive {mase['seasonal_naive']:.2f}; only modestly better than a flat 28-day mean."},
-            {"ok": False, "t": f"Day-level error is about {wape['holt_winters']:.0f}%", "d": f"Each city sees about {dm['mean_sessions']:.0f} sessions a day, so Poisson noise sets a high floor. An earlier '5–8%' claim compared 30-day averages and is withdrawn."},
-            {"ok": False, "t": "No weather input, point forecasts only", "d": "Forecast temperature would help but is not available at prediction time in this dataset; intervals are not evaluated."},
-        ],
-        "geoRows": [
-            {"k": "Expansion candidates flagged", "v": str(geo["observed"])},
-            {"k": "Expected under shuffled demand", "v": f"{geo['null_mean']:.1f} (5–95%: {geo['null_p5']:.0f}–{geo['null_p95']:.0f})", "warn": True},
-            {"k": "Permutation p-value", "v": f"{geo['p_value']:.2f}", "warn": geo["p_value"] > 0.05},
-            {"k": "Demand vs distance-from-centre (Spearman)", "v": f"{geo['pooled_rho']:+.2f}, p = {geo['pooled_p']:.2f}"},
-        ],
-        "geoNotes": [
-            {"ok": False, "t": "Flags are explained by layout, not demand", "d": "Shuffling which station is busy changes nothing: the candidates reflect where the stations are."},
-            {"ok": False, "t": "No spatial demand exists in this data", "d": "The generator ties volume to power and connector count only. Demand measured at stations can never reveal unserved areas."},
-            {"ok": True, "t": "What it does demonstrate", "d": "KMeans clustering, haversine coverage and an interactive map, plus the test that exposes their limits."},
-        ],
-        "realWeatherRows": int(real_weather),
+        "days": days,
+        "cities": cities,
+        "series": series,
+        "stations": [{"id": r.station_id, "city": r.city_key, "name": r.station_name, "operator": r.operator,
+                      "lat": float(r.latitude), "lon": float(r.longitude), "kw": int(r.power_kw), "conn": int(r.num_connectors),
+                      "sessions": int(r.sessions), "util": float(r.util)} for r in st.itertuples()],
+        "candidates": [{"city": r.city_key, "lat": float(r.candidate_latitude), "lon": float(r.candidate_longitude),
+                        "km": float(r.nearest_existing_station_km), "flag": bool(r.expansion_candidate)} for r in cand.itertuples()],
+        "forecast": forecast,
+        "backtest": {"all": all_w, "city": city_w, "mase": mase},
+        "model": {"params": dm["params"], "mean_sessions": dm["mean_sessions"], "ols_temp_pct_per_degree": dm["ols_temp_pct_per_degree"],
+                  "recovery": dm["recovery"], "n_inside": dm["n_inside"], "cong_median": float(daily["c"].median())},
+        "geo": geo,
     }
 
 
 def main():
     data = build_data()
-    data.pop("realWeatherRows")
-    html = (BUILD / "dashboard_template.html").read_text(encoding="utf-8")
+    html = (BUILD / "explorer_template.html").read_text(encoding="utf-8")
     html = html.replace("{{CSS}}", (BUILD / "dashboard.css").read_text(encoding="utf-8"))
-    html = html.replace("{{DATA}}", json.dumps(data, separators=(",", ":")))
+    html = html.replace("{{DATA}}", json.dumps(data, separators=(",", ":")).replace("</", "<\\/"))
     (DOCS / "index.html").write_text(html, encoding="utf-8")
     print(f"Wrote {DOCS / 'index.html'} ({len(html)/1024:.0f} KB)")
 

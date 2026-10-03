@@ -111,7 +111,7 @@ def main():
           "- A real analysis would also need holiday effects, local events and charger outages, none of which exist in this data."]
     md = "\n".join(L)
     (OUT_DIR / "demand_model_validation.json").write_text(json.dumps({
-        "recovery": recovery, "n_inside": int(n_inside), "mean_sessions": float(mean_sessions),
+        "recovery": recovery, "params": {k: float(v) for k, v in c.params.items()}, "n_inside": int(n_inside), "mean_sessions": float(mean_sessions),
         "ols_temp_pct_per_degree": float(a.params["temp_avg_c"] / mean_sessions), "dispersion": dispersion, "durbin_watson": dw,
         "corr_congestion_weekend": corr_cong_weekend}, indent=2), encoding="utf-8")
     (OUT_DIR / "demand_model_validation.md").write_text(md, encoding="utf-8")

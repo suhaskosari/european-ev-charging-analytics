@@ -1,7 +1,7 @@
 # European EV Mobility & Charging Demand Analytics Platform
 
 [![pipeline-ci](https://github.com/suhaskosari/european-ev-charging-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/suhaskosari/european-ev-charging-analytics/actions/workflows/ci.yml)
-**[Live dashboard](https://suhaskosari.github.io/european-ev-charging-analytics/)** | [Demand-model validation](outputs/demand_model_validation.md) | [Forecast backtest](outputs/forecast_backtest.md) | [Geospatial stress test](outputs/geospatial_stress_test.md)
+**[Live interactive explorer](https://suhaskosari.github.io/european-ev-charging-analytics/)** (filters, what-if demand model, forecast viewer, map, validation) | [Demand-model validation](outputs/demand_model_validation.md) | [Forecast backtest](outputs/forecast_backtest.md) | [Geospatial stress test](outputs/geospatial_stress_test.md)
 
 An end-to-end analytics platform for a European EV charging network operator:
 a Python/SQL data pipeline (with two real REST API integrations), a dbt
@@ -137,7 +137,7 @@ python python/eval_demand_model.py   # regression vs generator truth
 python python/eval_forecast.py       # rolling-origin backtest
 python python/eval_geospatial.py     # permutation stress test
 python python/write_sample_insights.py
-python python/build_dashboard.py     # regenerates docs/index.html
+python python/build_dashboard.py     # regenerates the interactive explorer, docs/index.html
 ```
 
 All commands are run from the repo root (dbt-duckdb resolves the warehouse
